@@ -1,0 +1,112 @@
+polars-country
+Copyright 2026 Drew Adlof and polars-country contributors
+
+The code in this repository is licensed under either of
+
+  * Apache License, Version 2.0 (LICENSE-APACHE)
+  * MIT License (LICENSE-MIT)
+
+at your option. Unless you explicitly state otherwise, any contribution
+intentionally submitted for inclusion in this work, as defined in the
+Apache-2.0 license, shall be dual licensed as above, without any additional
+terms or conditions.
+
+That dual license covers the code. It does NOT cover the third-party works
+below, which carry their own terms and are included or drawn upon
+deliberately. Read section 1 before redistributing a build of this package.
+
+
+================================================================================
+1. The ISO code tables  --  GNU LGPL, version 2.1 or later
+================================================================================
+
+The four JSON files in src/data/ are verbatim copies of the data tables
+published by the Debian iso-codes project:
+
+    https://salsa.debian.org/iso-codes-team/iso-codes
+    Copyright (C) 2016 Dr. Tobias Quathamer <toddy@debian.org>
+    SPDX-License-Identifier: LGPL-2.1-or-later
+
+    src/data/iso3166-1.json   <- data/iso_3166-1.json
+    src/data/iso3166-2.json   <- data/iso_3166-2.json
+    src/data/iso3166-3.json   <- data/iso_3166-3.json
+    src/data/iso4217.json     <- data/iso_4217.json
+
+The full license text is in LICENSES/LGPL-2.1-or-later.txt.
+
+WHAT THIS MEANS HERE
+
+These files are compiled into the shared library with `include_str!`, so any
+binary distribution of polars-country -- every published wheel -- is a
+distribution of an LGPL-2.1-or-later work in a combined form. The LGPL's
+central requirement in that situation is that a recipient must be able to
+modify the LGPL'd portion and use the result. Three things are done to satisfy
+it, and they are design constraints rather than paperwork:
+
+  * The tables are kept here in their original form, unmodified, and are
+    included in the sdist. This notice says where they came from and under
+    what terms, and LICENSES/ carries the license text.
+
+  * The tables can be replaced at runtime without rebuilding or relinking
+    anything. Set POLARS_COUNTRY_DATA to a directory of replacements before
+    first use, or call `polars_country.load_iso_data(directory)` at any point
+    in a running process. This is the LGPL section 6 "suitable mechanism"
+    obligation, met by a documented, supported, first-class feature.
+
+  * Nothing in this package's own license restricts that. The MIT/Apache-2.0
+    dual license on the code does not, and must not, purport to relicense the
+    tables.
+
+If you vendor, repackage, or redistribute this library -- especially inside a
+proprietary product -- these obligations travel with it. If your organization
+cannot accept them, do not ship the bundled snapshot: build with the tables
+removed and supply them at runtime through POLARS_COUNTRY_DATA instead.
+
+This project is not affiliated with or endorsed by the iso-codes project.
+
+
+================================================================================
+2. pycountry  --  GNU LGPL, version 2.1
+================================================================================
+
+This project is an independent reimplementation, in Rust, of the lookup rules
+in pycountry:
+
+    https://github.com/pycountry/pycountry
+    LGPL-2.1
+
+No pycountry source code is copied into this repository. Its behavior is
+reproduced deliberately and precisely -- src/db.rs mirrors
+pycountry.db.Database's field indexing and lookup order, src/fold.rs ports
+pycountry.remove_accents, and src/fuzzy.rs ports
+ExistingCountries.search_fuzzy -- so that the two libraries return identical
+results for identical input. tests/test_parity.py asserts exactly that,
+comparing against pycountry itself.
+
+pycountry is not a runtime dependency of this package; it is installed only
+for the test suite.
+
+This project is not affiliated with or endorsed by the pycountry maintainers.
+Bugs found here should be reported here, not upstream.
+
+
+================================================================================
+3. ISO standards
+================================================================================
+
+ISO 3166 and ISO 4217 are standards published by the International
+Organization for Standardization. The code assignments they define are not
+copyrightable as such; the tables above are the iso-codes project's
+compilation of them, which is what carries the LGPL. ISO is not affiliated
+with this project.
+
+
+================================================================================
+4. Rust dependencies
+================================================================================
+
+The compiled library statically links its Rust dependencies, including polars,
+pyo3, pyo3-polars, rayon, serde, serde_json, and unicode-normalization. These
+are variously MIT and Apache-2.0 licensed. Run `cargo tree` for the full
+dependency graph, or `cargo about generate` / `cargo deny` to produce a
+complete license inventory.

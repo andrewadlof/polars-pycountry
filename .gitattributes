@@ -1,0 +1,69 @@
+# ----------------------------------------------------------------------
+# 1. Global Line Ending Defaults
+# ----------------------------------------------------------------------
+# Handle text files automatically; let Git decide if a file is text or binary.
+* text=auto
+
+# ----------------------------------------------------------------------
+# 2. Python-Specific Code & Configuration Files (Force LF)
+# ----------------------------------------------------------------------
+# Python source files must use LF line endings to avoid cross-platform interpreter quirks.
+*.py           text eol=lf
+*.pyi          text eol=lf
+
+# Configuration and metadata files
+*.toml         text eol=lf
+*.ini          text eol=lf
+*.cfg          text eol=lf
+*.yaml         text eol=lf
+*.yml          text eol=lf
+*.json         text eol=lf
+
+# Shell scripts must use LF or they will immediately break on Linux/macOS
+*.sh           text eol=lf
+*.bat          text eol=crlf
+*.ps1          text eol=crlf
+
+# Documentation
+*.md           text eol=lf
+LICENSE        text eol=lf
+
+# Text-formatted data. Python's csv.writer defaults to a \r\n terminator, so
+# generated CSVs arrive as CRLF and Git normalizes them on check-in. The round
+# trip is stable, but expect a one-time diff on any CSV already committed with
+# CRLF line endings.
+*.csv          text eol=lf
+*.jsonl        text eol=lf
+*.svg          text eol=lf
+
+# ----------------------------------------------------------------------
+# 3. Jupyter Notebooks Data Handling
+# ----------------------------------------------------------------------
+# Treat notebooks as text but ignore them in language statistics (they contain noisy JSON)
+*.ipynb        text eol=lf linguist-documentation
+
+# ----------------------------------------------------------------------
+# 4. Binary Files Protection (Explicitly Prevents Normalization)
+# ----------------------------------------------------------------------
+# Ensure Git never touches the line endings of binary objects, assets, or data files.
+*.pyc          binary
+*.pyo          binary
+*.pyd          binary
+*.so           binary
+*.dll          binary
+*.exe          binary
+*.db           binary
+*.sqlite       binary
+
+# Media and Assets
+*.png          binary
+*.jpg          binary
+*.jpeg         binary
+*.gif          binary
+*.ico          binary
+*.pdf          binary
+
+# Data feeds and model artifacts
+*.parquet      binary
+*.pickle       binary
+*.npz          binary

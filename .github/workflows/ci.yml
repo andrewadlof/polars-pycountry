@@ -1,0 +1,161 @@
+---
+# Lint, type-check, test, and prove a wheel builds and imports on Linux.
+#
+# This runs at the *promotion* boundary, not on every PR into `development`:
+# on pull requests targeting `main` and on pushes that land there. Day-to-day
+# PRs into `development` are therefore unverified by CI until release time --
+# run `just check` locally before opening one, because nothing else will.
+#
+# `workflow_dispatch` runs it against any branch on demand, which is the escape
+# hatch when you do want a green tick on a development PR.
+#
+# The full multi-platform wheel matrix lives in release.yml, which can also be
+# dispatched to rehearse a release without publishing.
+name: CI
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+env:
+  CARGO_TERM_COLOR: always
+jobs:
+  rust:
+    name: Rust (fmt, clippy, test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # `cargo test` links libpython (the wheel build sets
+      # `extension-module`, which does not), and the crate is abi3-py310, so
+      # pyo3 needs an interpreter at least that new on PATH. Without this it
+      # picks up the runner's default python and refuses.
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - uses: Swatinem/rust-cache@v2
+      - name: Format
+        run: cargo fmt --check
+      - name: Clippy
+        run: cargo clippy --all-targets -- -D warnings
+      - name: Unit tests
+        run: cargo test --lib
+
+  # Lint, type-check, and test on the development interpreter. Older versions
+  # are covered by the `abi3` job below, which is what actually proves the
+  # stable-ABI claim.
+  python:
+    name: Python (lint, types, tests)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      # Pinned to an exact tag, not a floating major: setup-uv publishes
+      # moving `vN` tags only through v7, so `@v9` does not resolve and the
+      # job dies at "Set up job" before running a step.
+      - name: Install uv
+        uses: astral-sh/setup-uv@v9.0.0
+        with:
+          enable-cache: true
+          python-version: "3.12"
+      - uses: Swatinem/rust-cache@v2
+
+      # Builds the Rust extension into the venv as a side effect. uv passes the
+      # interpreter to maturin, so pyo3 resolves it without further help.
+      - name: Sync
+        run: uv sync
+      - name: Lint
+        run: |
+          uv run ruff check
+          uv run ruff format --check
+      - name: Type check
+        run: uv run ty check
+      - name: Docstrings
+        run: uv run pydoclint --config=pyproject.toml python scripts
+
+      # test_parity.py is the load-bearing suite: it sweeps every value in
+      # all four vendored ISO tables and diffs against pycountry itself.
+      - name: Tests
+        run: uv run pytest
+  wheel:
+    name: Build and smoke-test a wheel
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: PyO3/maturin-action@v1
+        with:
+          args: --release --out dist
+          manylinux: "2014"
+          sccache: "true"
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Install the wheel into a clean environment and exercise it
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install dist/*.whl
+          python -c "
+          import polars as pl, polars_country as pc
+          assert pc.lookup_country('USA')['alpha_2'] == 'US'
+          assert pl.DataFrame({'c': ['united kingdom', None]}).select(
+              pc.alpha_3('c'))['c'].to_list() == ['GBR', None]
+          assert pl.DataFrame({'s': ['CA']}).select(
+              pc.subdivision_code('s', country=pl.lit('US'))
+          )['s'][0] == 'US-CA'
+          print('ok, iso-codes', pc.iso_version(), pc.table_sizes())
+          "
+      - uses: actions/upload-artifact@v7
+        with:
+          name: wheel
+          path: dist/*.whl
+
+  # The package ships one `cp310-abi3` wheel per platform and claims it works
+  # on every Python from 3.10 up. That claim is only worth making if it is
+  # tested: this installs the *same* wheel built above on each interpreter and
+  # runs the full suite, rather than rebuilding per version.
+  abi3:
+    name: abi3 · Python ${{ matrix.python-version }}
+    needs:
+      - wheel
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version:
+          - "3.10"
+          - "3.11"
+          - "3.12"
+          - "3.13"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: wheel
+          path: dist
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install the wheel and the test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install dist/*.whl pytest pycountry
+      - name: Confirm the wheel is the abi3 one, not a rebuild
+        run: |
+          ls dist/
+          python -c "
+          import polars_country, sys
+          print('python', sys.version)
+          print('iso-codes', polars_country.iso_version())
+          "
+
+      # The parity suite is the real exercise: every value in all four
+      # vendored ISO tables, diffed against pycountry.
+      - name: Tests
+        run: python -m pytest
