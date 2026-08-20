@@ -1,8 +1,8 @@
 # Contributing to polars-country
 
 Thanks for taking the time. This is a small project with one unusual property worth understanding before you start:
-**its contract is another library's behavior.** Almost every design decision here follows from "must match
-`pycountry`", so a change that looks like an improvement can be a bug — including fixing what looks like a bug. The
+**its contract is another library's behavior.** Almost every design decision here follows from "must match `pycountry`",
+so a change that looks like an improvement can be a bug — including fixing what looks like a bug. The
 [parity requirement](#the-parity-rule) section explains where that bites.
 
 By contributing you agree that your work is dual licensed under MIT and Apache-2.0, matching the project — see
@@ -71,18 +71,18 @@ it lives in `pyproject.toml`.
 
 ## Layout
 
-| Path                    | What lives there                                                                              |
-| ----------------------- | --------------------------------------------------------------------------------------------- |
-| `src/fold.rs`           | Port of `pycountry.remove_accents`, plus the two normalizations the indices and fuzzy use     |
-| `src/db.rs`             | The four tables, their field indices in `pycountry`'s order, and swapping them at runtime     |
-| `src/fuzzy.rs`          | Port of `ExistingCountries.search_fuzzy` — the four scoring passes                            |
-| `src/resolve.rs`        | Exact → historic → fuzzy ordering, subdivision scoping, and the per-call memo                 |
-| `src/lib.rs`            | Polars kernels, the rayon fan-out, the scalar Python functions                                |
-| `src/data/`             | The vendored ISO tables (LGPL-2.1-or-later — see NOTICE) and their `VERSION` stamp            |
-| `python/polars_country/` | Expression wrappers, the `.country` namespace, and the table-refresh helpers                 |
-| `tests/test_parity.py`  | The differential suite against `pycountry`                                                    |
-| `tests/test_expr.py`    | Polars-level behavior: nulls, dtypes, scoping, composition, parallelism                       |
-| `tests/test_data.py`    | Table provenance, replacing them in a running process, and rejecting bad ones                 |
+| Path                     | What lives there                                                                          |
+| ------------------------ | ----------------------------------------------------------------------------------------- |
+| `src/fold.rs`            | Port of `pycountry.remove_accents`, plus the two normalizations the indices and fuzzy use |
+| `src/db.rs`              | The four tables, their field indices in `pycountry`'s order, and swapping them at runtime |
+| `src/fuzzy.rs`           | Port of `ExistingCountries.search_fuzzy` — the four scoring passes                        |
+| `src/resolve.rs`         | Exact → historic → fuzzy ordering, subdivision scoping, and the per-call memo             |
+| `src/lib.rs`             | Polars kernels, the rayon fan-out, the scalar Python functions                            |
+| `src/data/`              | The vendored ISO tables (LGPL-2.1-or-later — see NOTICE) and their `VERSION` stamp        |
+| `python/polars_country/` | Expression wrappers, the `.country` namespace, and the table-refresh helpers              |
+| `tests/test_parity.py`   | The differential suite against `pycountry`                                                |
+| `tests/test_expr.py`     | Polars-level behavior: nulls, dtypes, scoping, composition, parallelism                   |
+| `tests/test_data.py`     | Table provenance, replacing them in a running process, and rejecting bad ones             |
 
 [`docs/architecture/overview.md`](https://andrewadlof.github.io/polars-country/architecture/overview/) explains *how*
 this implementation maps onto `pycountry`'s — including which of its surprising behaviors are load-bearing. Read it
@@ -90,9 +90,8 @@ before touching `src/db.rs` or `src/fuzzy.rs`; none of it is obvious from the co
 
 ## The parity rule
 
-**Any change to matching behavior must keep `tests/test_parity.py` green**, and that suite is not a formality: it
-sweeps every value in all four vendored tables and compares against `pycountry` itself, with both sides reading the same
-files.
+**Any change to matching behavior must keep `tests/test_parity.py` green**, and that suite is not a formality: it sweeps
+every value in all four vendored tables and compares against `pycountry` itself, with both sides reading the same files.
 
 This means some things you might expect to be welcome are not:
 
@@ -101,8 +100,8 @@ This means some things you might expect to be welcome are not:
   while fuzzy is not. All of that is reproduced on purpose. Report it upstream; if upstream changes, we follow.
 - Adding accent folding, punctuation stripping, or "the"/"republic of" removal to the *exact* path. The exact indices
   are `str.lower()` and nothing else, because that is what `pycountry`'s are. Normalization belongs behind `fuzzy=True`.
-- Inventing a fuzzy search for currencies or the historic table. `pycountry` has neither, so there would be no
-  reference to check the result against — which is exactly what this package exists to avoid.
+- Inventing a fuzzy search for currencies or the historic table. `pycountry` has neither, so there would be no reference
+  to check the result against — which is exactly what this package exists to avoid.
 
 Two divergences already exist and are asserted in the parity suite so they stay deliberate: blank input is null rather
 than "every country", and fuzzy covers countries and subdivisions only. Adding a third needs a strong argument, a
@@ -198,8 +197,8 @@ A release promotes `development` to `main` — see [Releasing](#releasing).
 ## Pull requests
 
 Opening a PR pre-fills
-[the pull request template](https://github.com/andrewadlof/polars-country/blob/main/.github/pull_request_template.md)
-— it is the checklist below in long form, including the parity questions. Delete any section that doesn't apply.
+[the pull request template](https://github.com/andrewadlof/polars-country/blob/main/.github/pull_request_template.md) —
+it is the checklist below in long form, including the parity questions. Delete any section that doesn't apply.
 
 - Branch from `development` and target `development`. PRs against `main` are for releases only.
 - Add a bullet to the `## [Unreleased]` section of `CHANGELOG.md` for anything user-visible. Skip it for internal
@@ -245,12 +244,12 @@ be yanked, never replaced.
 CI publishes with **Trusted Publishing** (OIDC), so there is no stored token to leak, rotate, or forget to revoke. PyPI
 holds a publisher registered against four things, and the upload fails unless all four match:
 
-|                   |                     |
-| ----------------- | ------------------- |
-| Owner             | `andrewadlof`       |
+|                   |                  |
+| ----------------- | ---------------- |
+| Owner             | `andrewadlof`    |
 | Repository        | `polars-country` |
-| Workflow filename | `release.yml`       |
-| Environment       | `pypi`              |
+| Workflow filename | `release.yml`    |
+| Environment       | `pypi`           |
 
 Register or edit it at <https://pypi.org/manage/project/polars-country/settings/publishing/>. Renaming the repo,
 renaming `release.yml`, or renaming the environment breaks the match until the publisher is updated to agree — the
@@ -282,5 +281,5 @@ period rather than another comment. Maintainers may edit, lock, or remove contri
 
 ## Questions
 
-Open a [discussion or issue](https://github.com/andrewadlof/polars-country/issues). Bug reports that include the
-exact input string are answered fastest.
+Open a [discussion or issue](https://github.com/andrewadlof/polars-country/issues). Bug reports that include the exact
+input string are answered fastest.

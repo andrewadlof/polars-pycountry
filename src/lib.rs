@@ -25,7 +25,7 @@ use rayon::prelude::*;
 use serde::Deserialize;
 
 use crate::db::{CodeTable, Db, Subdivision};
-use crate::resolve::{CountryResolver, SubdivisionResolver};
+use crate::resolve::{CountryResolver, Prefetched, SubdivisionResolver};
 
 /// Below this many rows, fanning out costs more than it saves.
 ///
@@ -108,6 +108,15 @@ impl StringColumns {
     }
 }
 
+/// Whether a column of this size will actually be split across threads.
+///
+/// The prefetch below keys off the same answer: it exists to stop threads
+/// duplicating each other's work, so on a column that stays single-threaded it
+/// would be a wasted pass.
+fn will_fan_out(ca: &StringChunked, parallel: bool) -> bool {
+    parallel && ca.len() >= PARALLEL_THRESHOLD
+}
+
 /// Run `build` over one column, fanning out across rayon threads when the
 /// column is large enough to be worth it.
 ///
@@ -136,7 +145,7 @@ where
     T: Concat + Send,
     F: Fn(&StringChunked, Option<&StringChunked>) -> T + Sync,
 {
-    if !parallel || ca.len() < PARALLEL_THRESHOLD {
+    if !will_fan_out(ca, parallel) {
         return Ok(build(ca, scope));
     }
     let threads = rayon::current_num_threads().max(1);
@@ -195,6 +204,26 @@ fn scope_column(inputs: &[Series]) -> PolarsResult<Option<StringChunked>> {
 // Countries
 // =============================================================================
 
+/// Resolve the column's distinct values up front, when fanning out on the
+/// fuzzy path.
+///
+/// Without this each rayon thread would build its own cache, so a column with
+/// many distinct values would run the fuzzy search once *per thread* per value
+/// -- enough to make `parallel=True` several times slower than
+/// `parallel=False`.
+///
+/// Two cases skip it, because for them it is pure overhead:
+///
+/// * the exact path, where a hash probe is cheaper than collecting the
+///   distinct set in the first place;
+/// * a column that stays single-threaded, where the lazy per-row cache already
+///   resolves each distinct value exactly once, in the pass it is already
+///   making.
+fn prefetch<'a>(db: &'a Db, ca: &StringChunked, kwargs: &CountryKwargs) -> Option<Prefetched<'a>> {
+    let worth_it = kwargs.fuzzy && will_fan_out(ca, kwargs.parallel);
+    worth_it.then(|| resolve::prefetch_countries(db, ca, kwargs.historic, true))
+}
+
 /// One field of a country record, as the struct output exposes it.
 type CountryGetter = for<'a> fn(&'a CodeTable, usize) -> Option<&'a str>;
 
@@ -229,8 +258,13 @@ impl Concat for CountryColumns {
     }
 }
 
-fn build_country_extract(db: &Db, ca: &StringChunked, kwargs: &CountryKwargs) -> CountryColumns {
-    let mut resolver = CountryResolver::new(db, kwargs.fuzzy, kwargs.historic);
+fn build_country_extract<'a>(
+    db: &'a Db,
+    ca: &StringChunked,
+    kwargs: &CountryKwargs,
+    shared: Option<&'a Prefetched<'a>>,
+) -> CountryColumns {
+    let mut resolver = CountryResolver::with_shared(db, kwargs.fuzzy, kwargs.historic, shared);
     let mut strings: Vec<StringChunkedBuilder> = COUNTRY_FIELDS
         .iter()
         .map(|(name, _)| StringChunkedBuilder::new((*name).into(), ca.len()))
@@ -279,7 +313,10 @@ fn country_extract_output(_: &[Field]) -> PolarsResult<Field> {
 fn country_extract(inputs: &[Series], kwargs: CountryKwargs) -> PolarsResult<Series> {
     let ca = inputs[0].str()?;
     let db = db::current();
-    let out = build_column(ca, kwargs.parallel, |c| build_country_extract(&db, c, &kwargs))?;
+    let shared = prefetch(&db, ca, &kwargs);
+    let out = build_column(ca, kwargs.parallel, |c| {
+        build_country_extract(&db, c, &kwargs, shared.as_ref())
+    })?;
     let len = out.historic.len();
     let mut fields: Vec<Series> = out.strings.0.into_iter().map(IntoSeries::into_series).collect();
     fields.push(out.withdrawal_date.into_series());
@@ -288,13 +325,14 @@ fn country_extract(inputs: &[Series], kwargs: CountryKwargs) -> PolarsResult<Ser
 }
 
 /// Build one string field of the country record.
-fn build_country_field(
-    db: &Db,
+fn build_country_field<'a>(
+    db: &'a Db,
     ca: &StringChunked,
     kwargs: &CountryKwargs,
+    shared: Option<&'a Prefetched<'a>>,
     get: CountryGetter,
 ) -> StringChunked {
-    let mut resolver = CountryResolver::new(db, kwargs.fuzzy, kwargs.historic);
+    let mut resolver = CountryResolver::with_shared(db, kwargs.fuzzy, kwargs.historic, shared);
     let mut builder = StringChunkedBuilder::new(ca.name().clone(), ca.len());
     for opt in ca.iter() {
         builder.append_option(
@@ -312,8 +350,9 @@ macro_rules! country_field_expr {
         fn $fn_name(inputs: &[Series], kwargs: CountryKwargs) -> PolarsResult<Series> {
             let ca = inputs[0].str()?;
             let db = db::current();
+            let shared = prefetch(&db, ca, &kwargs);
             let out = build_column(ca, kwargs.parallel, |c| {
-                build_country_field(&db, c, &kwargs, $getter)
+                build_country_field(&db, c, &kwargs, shared.as_ref(), $getter)
             })?;
             Ok(out.into_series())
         }
@@ -357,8 +396,13 @@ impl Concat for MatchColumns {
     }
 }
 
-fn build_country_match(db: &Db, ca: &StringChunked, kwargs: &CountryKwargs) -> MatchColumns {
-    let mut resolver = CountryResolver::new(db, kwargs.fuzzy, kwargs.historic);
+fn build_country_match<'a>(
+    db: &'a Db,
+    ca: &StringChunked,
+    kwargs: &CountryKwargs,
+    shared: Option<&'a Prefetched<'a>>,
+) -> MatchColumns {
+    let mut resolver = CountryResolver::with_shared(db, kwargs.fuzzy, kwargs.historic, shared);
     let mut alpha_2 = StringChunkedBuilder::new("alpha_2".into(), ca.len());
     let mut matched_on = StringChunkedBuilder::new("matched_on".into(), ca.len());
     let mut score = PrimitiveChunkedBuilder::<UInt32Type>::new("score".into(), ca.len());
@@ -406,7 +450,10 @@ fn country_match_output(_: &[Field]) -> PolarsResult<Field> {
 fn country_match(inputs: &[Series], kwargs: CountryKwargs) -> PolarsResult<Series> {
     let ca = inputs[0].str()?;
     let db = db::current();
-    let out = build_column(ca, kwargs.parallel, |c| build_country_match(&db, c, &kwargs))?;
+    let shared = prefetch(&db, ca, &kwargs);
+    let out = build_column(ca, kwargs.parallel, |c| {
+        build_country_match(&db, c, &kwargs, shared.as_ref())
+    })?;
     let len = out.alpha_2.len();
     let fields = [
         out.alpha_2.into_series(),
@@ -499,6 +546,23 @@ currency_field_expr!(currency_name, CodeTable::name, "The currency's name, e.g. 
 // Subdivisions
 // =============================================================================
 
+/// Resolve the scope column's distinct countries up front, when fanning out
+/// on the fuzzy path.
+///
+/// Same reasoning as [`prefetch`]: the country scope is resolved with the same
+/// `fuzzy` setting, so it inherits the same per-thread duplication problem.
+/// The fan-out test is on `values`, since that is the column being split.
+fn prefetch_scope<'a>(
+    db: &'a Db,
+    values: &StringChunked,
+    scope: Option<&StringChunked>,
+    kwargs: &SubdivisionKwargs,
+) -> Option<Prefetched<'a>> {
+    let scope = scope?;
+    let worth_it = kwargs.fuzzy && will_fan_out(values, kwargs.parallel);
+    worth_it.then(|| resolve::prefetch_countries(db, scope, false, true))
+}
+
 /// One field of a subdivision record.
 type SubdivisionGetter = for<'a> fn(&'a Subdivision) -> Option<&'a str>;
 
@@ -526,13 +590,14 @@ const SUBDIVISION_FIELDS: [(&str, SubdivisionGetter); 5] = [
     ("parent_code", sub_parent_code),
 ];
 
-fn build_subdivision_extract(
-    db: &Db,
+fn build_subdivision_extract<'a>(
+    db: &'a Db,
     ca: &StringChunked,
     scope: Option<&StringChunked>,
     kwargs: &SubdivisionKwargs,
+    countries: Option<&'a Prefetched<'a>>,
 ) -> StringColumns {
-    let mut resolver = SubdivisionResolver::new(db, kwargs.fuzzy);
+    let mut resolver = SubdivisionResolver::with_shared(db, kwargs.fuzzy, countries);
     let mut builders: Vec<StringChunkedBuilder> = SUBDIVISION_FIELDS
         .iter()
         .map(|(name, _)| StringChunkedBuilder::new((*name).into(), ca.len()))
@@ -565,20 +630,22 @@ fn subdivision_extract(inputs: &[Series], kwargs: SubdivisionKwargs) -> PolarsRe
     let ca = inputs[0].str()?;
     let scope = scope_column(inputs)?;
     let db = db::current();
+    let countries = prefetch_scope(&db, ca, scope.as_ref(), &kwargs);
     let out = build_column2(ca, scope.as_ref(), kwargs.parallel, |values, piece| {
-        build_subdivision_extract(&db, values, piece, &kwargs)
+        build_subdivision_extract(&db, values, piece, &kwargs, countries.as_ref())
     })?;
     out.into_struct(ca.name().clone())
 }
 
-fn build_subdivision_field(
-    db: &Db,
+fn build_subdivision_field<'a>(
+    db: &'a Db,
     ca: &StringChunked,
     scope: Option<&StringChunked>,
     kwargs: &SubdivisionKwargs,
+    countries: Option<&'a Prefetched<'a>>,
     get: SubdivisionGetter,
 ) -> StringChunked {
-    let mut resolver = SubdivisionResolver::new(db, kwargs.fuzzy);
+    let mut resolver = SubdivisionResolver::with_shared(db, kwargs.fuzzy, countries);
     let mut builder = StringChunkedBuilder::new(ca.name().clone(), ca.len());
     for (i, opt) in ca.iter().enumerate() {
         builder.append_option(
@@ -597,8 +664,9 @@ macro_rules! subdivision_field_expr {
             let ca = inputs[0].str()?;
             let scope = scope_column(inputs)?;
             let db = db::current();
+            let countries = prefetch_scope(&db, ca, scope.as_ref(), &kwargs);
             let out = build_column2(ca, scope.as_ref(), kwargs.parallel, |values, piece| {
-                build_subdivision_field(&db, values, piece, &kwargs, $getter)
+                build_subdivision_field(&db, values, piece, &kwargs, countries.as_ref(), $getter)
             })?;
             Ok(out.into_series())
         }

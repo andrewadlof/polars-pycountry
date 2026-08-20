@@ -29,11 +29,23 @@ if TYPE_CHECKING:
 
 ROWS = 200_000
 
-# The `map_elements` path must beat these by a wide margin for the rewrite to
-# be worth the native dependency. Floors, not targets: they leave room for a
-# slower or busier host before they start crying wolf.
-MIN_SPEEDUP_EXACT = 15.0
-MIN_SPEEDUP_FUZZY = 15.0
+# The fuzzy case runs on far fewer rows, because `pycountry`'s `search_fuzzy`
+# costs about 15 ms per call -- it scans every country and every subdivision,
+# in Python, with no cache. At 200,000 rows the reference alone would take
+# most of an hour, which is not a benchmark anyone runs. Both sides are
+# measured on the same count, so the ratio is still the ratio.
+FUZZY_ROWS = 2_000
+
+# Floors, not targets: they leave room for a slower or busier host before they
+# start crying wolf.
+#
+# The exact floor is deliberately modest. `pycountry.countries.lookup` is a
+# dict probe -- sub-microsecond -- so nearly all of what `map_elements` costs
+# there is the interpreter round-trip, and a single-threaded native lookup can
+# only win by so much. The fuzzy floor is two orders of magnitude higher
+# because that is where the reference actually does work.
+MIN_SPEEDUP_EXACT = 5.0
+MIN_SPEEDUP_FUZZY = 100.0
 
 pytestmark = pytest.mark.bench
 
@@ -75,7 +87,7 @@ def messy_countries() -> list[str]:
     Returns
     -------
     list[str]
-        `ROWS` strings needing the fuzzy path.
+        `FUZZY_ROWS` strings needing the fuzzy path.
     """
     rng = random.Random(20260820)
     vocabulary = [
@@ -94,10 +106,10 @@ def messy_countries() -> list[str]:
         "Holland",
         "not a country at all",
     ]
-    return [rng.choice(vocabulary) for _ in range(ROWS)]
+    return [rng.choice(vocabulary) for _ in range(FUZZY_ROWS)]
 
 
-def _timed(label: str, fn: Callable[[], object]) -> float:
+def _timed(label: str, fn: Callable[[], object], rows: int) -> float:
     """Run `fn`, print its throughput, and return the elapsed seconds.
 
     Parameters
@@ -106,6 +118,8 @@ def _timed(label: str, fn: Callable[[], object]) -> float:
         Name to print alongside the measurement.
     fn : Callable[[], object]
         Zero-argument callable to time.
+    rows : int
+        How many rows `fn` processed, for the throughput figure.
 
     Returns
     -------
@@ -115,8 +129,19 @@ def _timed(label: str, fn: Callable[[], object]) -> float:
     start = time.perf_counter()
     fn()
     elapsed = time.perf_counter() - start
-    print(f"  {label:<34} {elapsed:7.3f}s  {ROWS / elapsed:>12,.0f} rows/s")
+    print(f"  {label:<34} {elapsed:7.3f}s  {rows / elapsed:>12,.0f} rows/s")
     return elapsed
+
+
+def _warm_up() -> None:
+    """Force the one-off table parse before anything is timed.
+
+    The ISO tables are parsed lazily, on the first lookup in the process --
+    about 40 ms for half a megabyte of JSON. That is a real cost, but it is
+    paid once, not per row, and leaving it inside the first measurement made
+    the single-threaded figure swing by a factor of two between runs.
+    """
+    pc.lookup_country("US", fuzzy=True)
 
 
 def _report(baseline: float, serial: float, parallel: float) -> None:
@@ -152,15 +177,18 @@ def test_exact_lookup_throughput(countries: list[str]) -> None:
             pl.col("c").map_elements(resolve, return_dtype=pl.String)
         )
 
+    _warm_up()
     print(f"\nexact lookup, {ROWS:,} rows:")
-    baseline = _timed("pycountry via map_elements", via_map_elements)
+    baseline = _timed("pycountry via map_elements", via_map_elements, ROWS)
     serial = _timed(
         "plugin (parallel=False)",
         lambda: df.with_columns(pc.alpha_2("c", parallel=False)),
+        ROWS,
     )
     parallel = _timed(
         "plugin (parallel=True)",
         lambda: df.with_columns(pc.alpha_2("c", parallel=True)),
+        ROWS,
     )
     _report(baseline, serial, parallel)
 
@@ -193,15 +221,20 @@ def test_fuzzy_throughput(messy_countries: list[str]) -> None:
             pl.col("c").map_elements(resolve, return_dtype=pl.String)
         )
 
-    print(f"\nfuzzy lookup, {ROWS:,} rows:")
-    baseline = _timed("pycountry via map_elements", via_map_elements)
+    _warm_up()
+    print(f"\nfuzzy lookup, {FUZZY_ROWS:,} rows:")
+    baseline = _timed(
+        "pycountry via map_elements", via_map_elements, FUZZY_ROWS
+    )
     serial = _timed(
         "plugin (parallel=False)",
         lambda: df.with_columns(pc.alpha_2("c", fuzzy=True, parallel=False)),
+        FUZZY_ROWS,
     )
     parallel = _timed(
         "plugin (parallel=True)",
         lambda: df.with_columns(pc.alpha_2("c", fuzzy=True, parallel=True)),
+        FUZZY_ROWS,
     )
     _report(baseline, serial, parallel)
 

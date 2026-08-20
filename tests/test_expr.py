@@ -11,6 +11,7 @@ import polars_country as pc
 import polars_country._expr
 
 import polars as pl
+import pycountry
 import pytest
 
 COUNTRIES = [
@@ -420,6 +421,28 @@ def test_parallel_and_serial_paths_agree(fuzzy: bool) -> None:
     assert serial.equals(parallel)
     # And the split did not shuffle anything: row i still answers value i.
     assert parallel["c"][:7].to_list() == serial["c"][:7].to_list()
+
+
+def test_a_high_cardinality_fuzzy_column_agrees_across_paths() -> None:
+    """The prefetch that makes parallel fuzzy fast must not change answers.
+
+    Above the fan-out threshold the fuzzy path resolves the column's distinct
+    values once, up front, instead of letting each thread build its own cache
+    -- without which a column like this ran the search once *per thread* per
+    value and came out several times slower than single-threaded. Many
+    distinct values is exactly the shape that exercises it.
+    """
+    vocabulary = [s.name for s in pycountry.subdivisions]
+    assert len(set(vocabulary)) > 2_000
+
+    df = pl.DataFrame({"c": (vocabulary * 40)[:150_000]})
+    assert df.height > 100_000
+
+    serial = df.select(pc.alpha_2("c", fuzzy=True, parallel=False))
+    parallel = df.select(pc.alpha_2("c", fuzzy=True, parallel=True))
+    assert serial.equals(parallel)
+    # Not vacuous: the column really does resolve.
+    assert parallel["c"].null_count() < df.height
 
 
 def test_the_scope_column_survives_the_parallel_split() -> None:

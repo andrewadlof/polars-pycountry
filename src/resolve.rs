@@ -26,8 +26,20 @@
 //! resolvers therefore cache by input string. The cache lives for one call on
 //! one slice of one column, so it cannot outlive a table swap or grow without
 //! bound across queries.
+//!
+//! A per-slice cache is not enough on its own, though. When the column is
+//! large enough to fan out, each thread would build its own -- so a column of
+//! N distinct values would run the search up to `threads * N` times instead of
+//! N, and the parallel path could end up *slower* than the serial one on a
+//! high-cardinality column. [`prefetch_countries`] closes that: it resolves
+//! every distinct value in the column exactly once, itself in parallel, and
+//! the row fill afterwards is a hash probe. Both phases scale, and no search
+//! is ever repeated.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+
+use polars::prelude::StringChunked;
+use rayon::prelude::*;
 
 use crate::db::{CodeTable, Db};
 use crate::fold::{char_find, fold_query, lower_into};
@@ -60,19 +72,37 @@ pub struct CountryResolver<'a> {
     db: &'a Db,
     fuzzy: bool,
     historic: bool,
+    /// Answers computed once for the whole column, before any fan-out. `None`
+    /// on the exact path and for scalar callers, where there is nothing to
+    /// share.
+    shared: Option<&'a Prefetched<'a>>,
     /// Only allocated when fuzzy is on: an exact lookup is already a hash
-    /// probe, so caching it would cost more than it saves.
+    /// probe, so caching it would cost more than it saves. Backs up `shared`
+    /// for anything it does not hold.
     memo: Option<HashMap<String, Option<CountryMatch<'a>>>>,
     /// Reused lowercase buffer, so the exact path allocates once per call
     /// rather than once per row.
     scratch: String,
 }
 
+/// Every distinct value of one column, already resolved.
+pub type Prefetched<'a> = HashMap<String, Option<CountryMatch<'a>>>;
+
 impl<'a> CountryResolver<'a> {
     /// Build a resolver over `db` with the given behavior.
     pub fn new(db: &'a Db, fuzzy: bool, historic: bool) -> Self {
+        Self::with_shared(db, fuzzy, historic, None)
+    }
+
+    /// Build a resolver that answers from a column-wide prefetch first.
+    pub fn with_shared(
+        db: &'a Db,
+        fuzzy: bool,
+        historic: bool,
+        shared: Option<&'a Prefetched<'a>>,
+    ) -> Self {
         let memo = fuzzy.then(HashMap::new);
-        Self { db, fuzzy, historic, memo, scratch: String::new() }
+        Self { db, fuzzy, historic, shared, memo, scratch: String::new() }
     }
 
     /// Resolve one value, or `None` if nothing matched.
@@ -80,6 +110,9 @@ impl<'a> CountryResolver<'a> {
         let trimmed = value.trim();
         if trimmed.is_empty() {
             return None;
+        }
+        if let Some(hit) = self.shared.and_then(|shared| shared.get(trimmed)) {
+            return *hit;
         }
         let Some(memo) = &self.memo else {
             return Self::compute(self.db, self.fuzzy, self.historic, &mut self.scratch, trimmed);
@@ -97,7 +130,9 @@ impl<'a> CountryResolver<'a> {
     }
 
     /// The resolution order itself, taking its state as arguments so the
-    /// scratch buffer can be borrowed mutably alongside the memo.
+    /// scratch buffer can be borrowed mutably alongside the memo, and so
+    /// [`prefetch_countries`] can drive it without building a resolver per
+    /// value.
     fn compute(
         db: &'a Db,
         fuzzy: bool,
@@ -143,6 +178,41 @@ impl<'a> CountryResolver<'a> {
     }
 }
 
+/// Resolve every distinct value in `ca` once, fanning the searches out.
+///
+/// Worth doing only for the fuzzy path: an exact lookup is already a hash
+/// probe, so collecting the distinct set would cost more than it saves.
+///
+/// `parallel` follows the caller's keyword rather than the column length --
+/// the work here is proportional to the number of *distinct* values, and a
+/// short column of expensive-to-resolve strings is exactly the case that
+/// benefits.
+pub fn prefetch_countries<'a>(
+    db: &'a Db,
+    ca: &StringChunked,
+    historic: bool,
+    parallel: bool,
+) -> Prefetched<'a> {
+    let mut distinct: HashSet<&str> = HashSet::new();
+    for value in ca.iter().flatten() {
+        let trimmed = value.trim();
+        if !trimmed.is_empty() {
+            distinct.insert(trimmed);
+        }
+    }
+
+    let resolve_one = |value: &str| {
+        let mut scratch = String::new();
+        (value.to_owned(), CountryResolver::compute(db, true, historic, &mut scratch, value))
+    };
+
+    if parallel && distinct.len() > 1 {
+        distinct.into_iter().par_bridge().map(resolve_one).collect()
+    } else {
+        distinct.into_iter().map(resolve_one).collect()
+    }
+}
+
 /// Resolves subdivision strings, optionally scoped to a country.
 ///
 /// Scoping matters more than it looks. Subdivision names are not unique --
@@ -161,7 +231,18 @@ impl<'a> SubdivisionResolver<'a> {
     /// Build a resolver over `db`. `fuzzy` applies to both the country scope
     /// and the subdivision name itself.
     pub fn new(db: &'a Db, fuzzy: bool) -> Self {
-        Self { db, fuzzy, countries: CountryResolver::new(db, fuzzy, false), memo: HashMap::new() }
+        Self::with_shared(db, fuzzy, None)
+    }
+
+    /// Build a resolver whose country scopes come from a column-wide
+    /// prefetch, so the fan-out does not re-resolve them per thread.
+    pub fn with_shared(db: &'a Db, fuzzy: bool, countries: Option<&'a Prefetched<'a>>) -> Self {
+        Self {
+            db,
+            fuzzy,
+            countries: CountryResolver::with_shared(db, fuzzy, false, countries),
+            memo: HashMap::new(),
+        }
     }
 
     /// Resolve one value within an optional country, returning a 3166-2

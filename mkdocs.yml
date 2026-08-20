@@ -9,7 +9,8 @@
 # The API reference is generated from the NumPy docstrings that pydoclint
 # already enforces, so it cannot drift from the code either.
 site_name: polars-country
-site_description: Vectorized, pycountry-compatible ISO 3166 / 4217 code lookup for Polars.
+site_description: Vectorized, pycountry-compatible ISO 3166 / 4217 code lookup for
+  Polars.
 site_url: https://andrewadlof.github.io/polars-country/
 site_author: Drew Adlof
 repo_url: https://github.com/andrewadlof/polars-country

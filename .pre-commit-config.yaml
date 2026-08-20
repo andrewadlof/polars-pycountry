@@ -8,7 +8,10 @@ repos:
       # Remove trailing white space
       - id: trailing-whitespace
         name: trailing-whitespace
-        exclude: .*marimo.*|^notebooks/
+        # src/data holds the vendored ISO tables. They must stay byte-identical
+        # to the ones pycountry ships -- that is what makes the parity suite
+        # meaningful -- so no rewriting hook may touch them.
+        exclude: .*marimo.*|^notebooks/|^src/data/
         language: system
         types_or:
           - bash
@@ -32,7 +35,7 @@ repos:
       # Fix end of files
       - id: end-of-file-fixer
         name: end-of-file-fixer
-        exclude: .*marimo.*|^notebooks/
+        exclude: .*marimo.*|^notebooks/|^src/data/
         language: system
         types_or:
           - bash
@@ -91,9 +94,13 @@ repos:
         name: detect-private-key
         language: system
       # Format JSON files
+      # Deliberately NOT applied to src/data: reformatting the vendored ISO
+      # tables would silently break their byte-identity with pycountry's copies,
+      # and tests/test_data.py would start failing for a reason that looks
+      # nothing like "a formatter reindented them".
       - id: pretty-format-json
         name: pretty-format-json
-        exclude: .*marimo.*|^notebooks/
+        exclude: .*marimo.*|^notebooks/|^src/data/
         language: system
         args:
           - --autofix

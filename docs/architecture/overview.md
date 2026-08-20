@@ -29,8 +29,8 @@ the same code over the same tables.
 `pycountry.db.Database` builds one index per field, mapping each lowercased value to its record. `lookup()` then walks
 those indices **in the order the fields were first seen in the JSON** and returns the first hit.
 
-That ordering is observable behavior, not an implementation detail. It decides what an ambiguous string resolves to,
-and reporting it is what `matched_on` does. So:
+That ordering is observable behavior, not an implementation detail. It decides what an ambiguous string resolves to, and
+reporting it is what `matched_on` does. So:
 
 - Records are parsed with their keys in file order, using serde_json's `preserve_order` feature. This is the reason for
   that dependency; without it the indices would be built in hash order and `lookup` would answer differently.
@@ -66,10 +66,10 @@ expression call memoizes by input string. The scores are identical; only the wor
 
 Two different normalizations are in play, and conflating them is the easiest way to diverge:
 
-| | used by | behavior |
-| --- | --- | --- |
-| `str.lower()` | the exact indices | case-insensitive, accent-**sensitive** |
-| `remove_accents(v.lower())` | fuzzy search | case- and accent-insensitive |
+|                             | used by           | behavior                               |
+| --------------------------- | ----------------- | -------------------------------------- |
+| `str.lower()`               | the exact indices | case-insensitive, accent-**sensitive** |
+| `remove_accents(v.lower())` | fuzzy search      | case- and accent-insensitive           |
 
 That asymmetry is why `pycountry.countries.lookup("Cote d'Ivoire")` raises while `search_fuzzy` finds it, and this
 package inherits it. `src/fold.rs` ports `remove_accents` directly: NFKD, then drop every character with a nonzero

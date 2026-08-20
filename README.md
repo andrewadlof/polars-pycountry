@@ -7,9 +7,9 @@
 
 ISO 3166 and ISO 4217 code lookup for [Polars](https://pola.rs), as a native Rust expression plugin.
 
-Turning a country column into codes looks like a dictionary lookup until you meet real data. `US`, `USA`, `840`, `United
-States`, `United States of America` and 🇺🇸 are all the same country; `Côte d'Ivoire` and `Cote d'Ivoire` are not the
-same string; `CA` is Canada or California depending on the column next to it. The reference answer in Python is
+Turning a country column into codes looks like a dictionary lookup until you meet real data. `US`, `USA`, `840`,
+`United States`, `United States of America` and 🇺🇸 are all the same country; `Côte d'Ivoire` and `Cote d'Ivoire` are not
+the same string; `CA` is Canada or California depending on the column next to it. The reference answer in Python is
 [`pycountry`](https://github.com/pycountry/pycountry) — a good library, but a Python one. Inside Polars it can only be
 driven through `Expr.map_elements`, one interpreter round-trip per row.
 
@@ -77,31 +77,31 @@ Three families of expressions, all taking a string column.
 
 ### Countries — ISO 3166-1
 
-|                     | `"USA"`                          |                                       |
-| ------------------- | -------------------------------- | ------------------------------------- |
-| `pc.extract`        | struct of every field            | one pass, all fields                  |
-| `pc.match`          | `{"US", "alpha_3", null, false}` | *how* it resolved — see below         |
-| `pc.alpha_2`        | `US`                             |                                       |
-| `pc.alpha_3`        | `USA`                            |                                       |
-| `pc.numeric`        | `840`                            | Utf8, zero-padded                     |
-| `pc.name`           | `United States`                  | the standard's short name             |
-| `pc.official_name`  | `United States of America`       | null where none differs               |
-| `pc.common_name`    | null                             | e.g. `Bolivia` for `BO`               |
-| `pc.flag`           | 🇺🇸                               | also accepted as *input*              |
+|                    | `"USA"`                          |                               |
+| ------------------ | -------------------------------- | ----------------------------- |
+| `pc.extract`       | struct of every field            | one pass, all fields          |
+| `pc.match`         | `{"US", "alpha_3", null, false}` | *how* it resolved — see below |
+| `pc.alpha_2`       | `US`                             |                               |
+| `pc.alpha_3`       | `USA`                            |                               |
+| `pc.numeric`       | `840`                            | Utf8, zero-padded             |
+| `pc.name`          | `United States`                  | the standard's short name     |
+| `pc.official_name` | `United States of America`       | null where none differs       |
+| `pc.common_name`   | null                             | e.g. `Bolivia` for `BO`       |
+| `pc.flag`          | 🇺🇸                               | also accepted as *input*      |
 
 The input may be any indexed field: alpha-2, alpha-3, numeric, name, official name, common name, or the flag emoji.
 Matching is case-insensitive.
 
 ### Subdivisions — ISO 3166-2
 
-|                            | `"California"`, country `"US"` |
-| -------------------------- | ------------------------------ |
-| `pc.subdivision`           | struct of every field          |
-| `pc.subdivision_code`      | `US-CA`                        |
-| `pc.subdivision_name`      | `California`                   |
-| `pc.subdivision_type`      | `State`                        |
-| `pc.subdivision_country`   | `US`                           |
-| `pc.subdivision_parent_code` | null                         |
+|                              | `"California"`, country `"US"` |
+| ---------------------------- | ------------------------------ |
+| `pc.subdivision`             | struct of every field          |
+| `pc.subdivision_code`        | `US-CA`                        |
+| `pc.subdivision_name`        | `California`                   |
+| `pc.subdivision_type`        | `State`                        |
+| `pc.subdivision_country`     | `US`                           |
+| `pc.subdivision_parent_code` | null                           |
 
 The value may be a full code (`"US-CA"`), a bare code with a country (`"CA"`), or a name (`"California"`).
 
@@ -130,8 +130,7 @@ reference to match a fuzzy currency search against.
 ### Nulls
 
 Every expression returns **null** when nothing matched, and null for null input. Blank and whitespace-only input is null
-too — see
-[fuzzy matching](https://andrewadlof.github.io/polars-country/matching/#fuzzy-matching) for why that is a
+too — see [fuzzy matching](https://andrewadlof.github.io/polars-country/matching/#fuzzy-matching) for why that is a
 deliberate divergence from `pycountry`.
 
 Null is also a real answer, not only a failure: most countries have no `official_name` and almost none have a
@@ -227,7 +226,41 @@ struct either way — a keyword never changes its shape.
 
 ## Performance
 
-<!--BENCH-TABLE-->
+Measured with `just bench`:
+
+| exact lookup, 200,000 rows          |  throughput | vs. `map_elements` |
+| ----------------------------------- | ----------: | -----------------: |
+| `pycountry` via `Expr.map_elements` | 488k rows/s |                  — |
+| `polars_country`, `parallel=False`  | 6.6M rows/s |              13.6× |
+| `polars_country`, `parallel=True`   |  21M rows/s |              43.5× |
+
+| fuzzy lookup, 2,000 rows                 |  throughput | vs. `map_elements` |
+| ---------------------------------------- | ----------: | -----------------: |
+| `pycountry` via `Expr.map_elements`      |  127 rows/s |                  — |
+| `polars_country`, `fuzzy=True`, serial   | 514k rows/s |             4,059× |
+| `polars_country`, `fuzzy=True`, parallel | 582k rows/s |             4,598× |
+
+<sub>Intel Core Ultra 5 135U (14 threads), 15 GB RAM, Linux 6.6 (WSL2), Python 3.12.12, Polars 1.43.2.</sub>
+
+The two row counts differ on purpose. `pycountry.countries.lookup` is a dict probe, so 200,000 rows of it take a
+fraction of a second; `search_fuzzy` scans every country *and* every subdivision, in Python, with no cache, at ~15 ms
+per call — 200,000 rows of that would take most of an hour. Both sides are measured on the same count, so each ratio
+still compares like with like.
+
+### What the fuzzy number depends on
+
+Fuzzy matching is memoized: each call resolves the *distinct* values in the column, not the rows. Real columns repeat
+themselves heavily, so the cost usually lands closer to the cardinality than to the row count — but it is worth knowing
+which regime you are in:
+
+| 200,000 rows, `fuzzy=True` | `parallel=False` | `parallel=True` |
+| -------------------------- | ---------------: | --------------: |
+| 14 distinct values         |     13.5M rows/s |    15.6M rows/s |
+| 5,046 distinct values      |      145k rows/s |     551k rows/s |
+
+Above 100,000 rows the distinct values are resolved once up front, in parallel, and the rows are filled from the result.
+Without that each thread would build its own cache and re-run the same searches, which made `parallel=True` *slower*
+than `parallel=False` on a high-cardinality column.
 
 Measure a **release build**. `just bench` builds one; a plain `maturin develop` is unoptimized and far slower on this
 workload, which measures the profile rather than the code.
@@ -235,10 +268,6 @@ workload, which measures the profile rather than the code.
 Columns of 100k rows or more are split across [rayon](https://docs.rs/rayon) threads; pass `parallel=False` to force
 single-threaded. The threshold sits above the streaming engine's morsel size, so when Polars is already calling the
 plugin from several of its own worker threads each call stays single-threaded rather than nesting a fan-out inside it.
-
-Fuzzy matching is a scan over ~250 countries and ~5,000 subdivisions per *distinct* input, not per row: each call
-memoizes what it has already resolved. Real columns repeat themselves heavily, so the cost lands closer to the
-cardinality than to the row count.
 
 A caveat worth stating plainly: if your column has few distinct values, a `dict` built over `Series.unique()` plus
 `replace_strict` can still beat any per-row approach, including this one. This package wins on high-cardinality columns,
@@ -267,8 +296,8 @@ different snapshots. `tests/test_data.py` separately asserts the vendored tables
 
 The known, deliberate divergences are blank input (null rather than "every country"), and no fuzzy search over
 currencies or the historic table. Everything else agreeing is the contract; if you find an input where this package and
-`pycountry` disagree, that is a bug here. Please
-[open an issue](https://github.com/andrewadlof/polars-country/issues) with the input.
+`pycountry` disagree, that is a bug here. Please [open an issue](https://github.com/andrewadlof/polars-country/issues)
+with the input.
 
 <!--correctness-end-->
 
