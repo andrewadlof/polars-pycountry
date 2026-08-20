@@ -180,5 +180,8 @@ reports/*_files/
 # Notebook data
 notebooks/*.parquet
 
+# Exported notebook HTML is a build artifact -- `just notebook-export` makes it
+notebooks/*.html
+
 # MkDocs build output (the site is published from CI, never committed)
 site/

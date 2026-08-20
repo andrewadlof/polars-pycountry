@@ -57,12 +57,18 @@ inside the release workflow's cross-compilation containers, where `.venv` does n
 just test       # cargo test --lib + pytest
 just check      # the full gate: fmt, clippy, cargo test, ruff, pytest
 just bench      # throughput vs. pycountry through map_elements
+just notebook   # the interactive tour, in marimo
 just precommit  # every pre-commit hook (ruff, ty, pydoclint, cargo, mdformat, taplo)
 just docs-serve # the documentation site, with live reload
 just docs       # build the site, failing on broken links
 ```
 
 `just check` is what CI runs. Run it before opening a PR.
+
+`notebooks/polars_country_tour.py` is a marimo notebook, and `just notebook-export` runs every one of its cells for
+real. It is worth treating as a second smoke test after an API change: a signature that has moved out from under the
+notebook fails there rather than in front of a reader. marimo lives in its own `notebook` dependency group, so a plain
+`uv sync` does not install it and CI never runs the notebook.
 
 Rust code is formatted with `cargo fmt` (see `rustfmt.toml`) and linted with `cargo clippy -- -D warnings`. Python is
 formatted and linted with [ruff](https://docs.astral.sh/ruff/), type-checked with [ty](https://github.com/astral-sh/ty),
@@ -83,6 +89,7 @@ it lives in `pyproject.toml`.
 | `tests/test_parity.py`   | The differential suite against `pycountry`                                                |
 | `tests/test_expr.py`     | Polars-level behavior: nulls, dtypes, scoping, composition, parallelism                   |
 | `tests/test_data.py`     | Table provenance, replacing them in a running process, and rejecting bad ones             |
+| `notebooks/`             | The marimo tour: every expression run live, plus a benchmark and a parity spot-check      |
 
 [`docs/architecture/overview.md`](https://andrewadlof.github.io/polars-country/architecture/overview/) explains *how*
 this implementation maps onto `pycountry`'s — including which of its surprising behaviors are load-bearing. Read it

@@ -58,6 +58,32 @@ refresh-iso:
     uv run python scripts/refresh_iso.py
 
 # ----------------------------------------------------------------------------
+# notebook: the interactive tour
+#
+# marimo lives in its own dependency group, so the everyday `uv sync` does not
+# pay for it. The notebook imports the compiled extension, so after a Rust
+# change run `just dev` first or it exercises the previous build.
+# ----------------------------------------------------------------------------
+
+# Open the tour notebook for editing (reactive, cells are editable)
+[group('dev')]
+notebook:
+    uv run --group notebook marimo edit notebooks/polars_country_tour.py
+
+# Open the tour as a read-only app -- the widgets work, the code is hidden
+[group('dev')]
+notebook-run:
+    uv run --group notebook marimo run notebooks/polars_country_tour.py
+
+# Doubles as a smoke test: every cell runs for real, so an API that has moved
+# out from under the notebook fails here rather than in front of a reader.
+#
+# Execute the notebook end to end and write a self-contained HTML copy
+[group('dev')]
+notebook-export out="notebooks/polars_country_tour.html":
+    uv run --group notebook marimo export html notebooks/polars_country_tour.py -o {{out}}
+
+# ----------------------------------------------------------------------------
 # docs: the MkDocs site
 #
 # The `docs` dependency group is not in `default-groups`, so these recipes ask

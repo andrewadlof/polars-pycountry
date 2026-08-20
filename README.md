@@ -159,6 +159,16 @@ pc.lookup_currency("840")  # {'alpha_3': 'USD', ...}
 pc.search_countries("guinea", limit=3)  # ranked, with scores
 ```
 
+### An interactive tour
+
+The repository ships a [marimo](https://marimo.io) notebook that exercises every expression against live data, including
+a spot-check against `pycountry` and a benchmark you can re-run at whatever row count you like:
+
+```bash
+just notebook       # open it, editable and reactive
+just notebook-run   # open it read-only: the widgets work, the code is hidden
+```
+
 <!--usage-end-->
 
 <!--matching-start-->
