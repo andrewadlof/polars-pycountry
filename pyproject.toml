@@ -92,17 +92,6 @@ dev = [
   "yamlfix>=1.17.0",
   "ziglang>=0.13.0",
 ]
-# Also kept out of `dev` and `default-groups`: marimo is only needed to open
-# the tour notebook, and nothing in CI runs it. `just notebook` asks for this
-# group explicitly.
-notebook = [
-  # The notebook drives the plugin against pycountry live, so it needs the
-  # reference too -- `dev` already pins it, but this group has to stand alone
-  # when asked for on its own.
-  "marimo>=0.24.0",
-  "pycountry>=26.2.16",
-]
-
 # Kept out of `dev` (and out of `default-groups`) so the everyday `uv sync` and
 # CI's test jobs do not pay for the docs toolchain. `just docs` and the docs
 # workflow ask for this group explicitly.
