@@ -25,7 +25,7 @@ name = "_internal"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-# pyo3 0.28 is what pyo3-polars 0.27 pins. abi3-py310 gives one wheel per
+# pyo3 0.29 is what pyo3-polars 0.28 pins. abi3-py310 gives one wheel per
 # platform covering Python 3.10+, matching polars' own floor.
 # `extension-module` is deliberately NOT enabled here -- it tells pyo3 not to
 # link libpython, which is right for the wheel but leaves `cargo test`'s test
@@ -34,14 +34,14 @@ crate-type = ["cdylib", "rlib"]
 # `generate-import-lib` synthesizes the `python3` import library at build time
 # rather than requiring one from a real interpreter install, which is what the
 # Windows arm64 cross-build needs -- the runner is x64 and has no arm64 Python.
-pyo3 = { version = "0.28", features = ["abi3-py310", "generate-import-lib"] }
-# pyo3-polars 0.27 <-> polars-rs 0.54.4 <-> py-polars 1.42.x. The plugin FFI ABI
+pyo3 = { version = "0.29", features = ["abi3-py310", "generate-import-lib"] }
+# pyo3-polars 0.28 <-> polars-rs 0.55.1 <-> py-polars 1.44.x. The plugin FFI ABI
 # is (0, 1) and unchanged since py-polars 1.37, so one build spans the whole
 # `polars>=1.37.1` range the consuming projects pin. The Rust pin trailing the
 # py-polars the tests run against is expected and fine -- what has to agree is
-# the ABI, not the version. Last verified against py-polars 1.44.0.
-pyo3-polars = { version = "0.27", features = ["derive", "dtype-struct"] }
-polars = { version = "0.54.4", default-features = false, features = [
+# the ABI, not the version, and tests/test_abi.py asserts exactly that.
+pyo3-polars = { version = "0.28", features = ["derive", "dtype-struct"] }
+polars = { version = "0.55.1", default-features = false, features = [
   "dtype-struct",
 ] }
 rayon = "1"

@@ -1,3 +1,7 @@
 [toolchain]
-channel = "1.93.0"
+# 1.95 is a floor polars-rs 0.55 imposes, not a preference: polars-utils pulls
+# sysinfo 0.39 with its "system" feature, and that whole release line declares
+# rust-version = 1.95. Nothing on this side can drop it -- pyo3-polars requires
+# polars with the features that enable it.
+channel = "1.95.0"
 components = ["rustfmt", "clippy"]
