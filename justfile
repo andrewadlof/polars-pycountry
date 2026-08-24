@@ -118,10 +118,60 @@ precommit *args:
 version:
     uv version --short
 
+# Bump the version everywhere it is recorded: `just bump patch` | minor | major
+#
+# Three files have to agree, and nothing checks them at build time: maturin
+# stamps the wheel from pyproject.toml, the crate reports Cargo.toml, and
+# Cargo.lock carries its own entry for this package. `uv version` only knows
+# about the first, so 0.1.1 was cut with Cargo.toml still reading 0.1.0 and
+# needed fixing by hand. `just version-check` is the guard; this keeps them
+# in step in the first place.
+#
 # Bump the version: `just bump patch` | minor | major
 [group('release')]
 bump level="patch":
+    #!/usr/bin/env bash
+    set -euo pipefail
     uv version --bump {{level}}
+    version="$(uv version --short)"
+    # Only the [package] table: dependency tables carry versions of their own,
+    # so a blanket substitution would rewrite the wrong lines.
+    awk -v v="$version" '
+        /^\[/ { in_package = ($0 == "[package]") }
+        in_package && /^version = / { print "version = \"" v "\""; next }
+        { print }
+    ' Cargo.toml > Cargo.toml.bump && mv Cargo.toml.bump Cargo.toml
+    # Refresh this package's own entry in Cargo.lock. --offline because a
+    # version bump is a local edit and should not need the network. The crate
+    # name is read rather than hardcoded -- it has changed once already.
+    package="$(awk '/^\[/ { in_package = ($0 == "[package]") }
+                    in_package && /^name = / { gsub(/"/, "", $3); print $3; exit }' Cargo.toml)"
+    cargo update --offline --package "$package" >/dev/null
+    just version-check
+
+# Fail unless pyproject.toml, Cargo.toml, and Cargo.lock all report the same
+# version. Cheap enough to run before tagging, and the only thing standing
+# between a mismatch and an immutable upload.
+#
+# Check pyproject.toml, Cargo.toml, and Cargo.lock all agree
+[group('release')]
+version-check:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    pyproject="$(uv version --short)"
+    package="$(awk '/^\[/ { in_package = ($0 == "[package]") }
+                    in_package && /^name = / { gsub(/"/, "", $3); print $3; exit }' Cargo.toml)"
+    cargo_toml="$(awk '/^\[/ { in_package = ($0 == "[package]") }
+                       in_package && /^version = / { gsub(/"/, "", $3); print $3; exit }' Cargo.toml)"
+    cargo_lock="$(awk -v pkg="$package" '$0 == "name = \"" pkg "\"" { found = 1; next }
+                       found && /^version = / { gsub(/"/, "", $3); print $3; exit }' Cargo.lock)"
+    printf 'pyproject.toml  %s\nCargo.toml      %s\nCargo.lock      %s\n' \
+        "$pyproject" "$cargo_toml" "$cargo_lock"
+    if [ "$pyproject" != "$cargo_toml" ] || [ "$pyproject" != "$cargo_lock" ]; then
+        echo "error: versions disagree -- fix before tagging." >&2
+        exit 1
+    fi
+    echo "versions agree: $pyproject"
 
 # Remove build artifacts
 [group('release')]
@@ -160,7 +210,7 @@ _require-main:
 
 # Tag the current version and push it, which triggers the release workflow
 [group('release')]
-tag: _require-main
+tag: _require-main version-check
     #!/usr/bin/env bash
     set -euo pipefail
     version="$(uv version --short)"

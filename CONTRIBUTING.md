@@ -214,11 +214,13 @@ Opening a PR pre-fills
 For maintainers. A release is a **promotion of `development` to `main`**, then a tag on `main`:
 
 1. On `development`, `just bump patch` (or `minor` / `major`) and move the `## [Unreleased]` bullets in `CHANGELOG.md`
-   under a new dated version heading. That is the only PR that touches the version.
+   under a new dated version heading. That is the only PR that touches the version. `just bump` moves all three places
+   the version is recorded — `pyproject.toml`, `Cargo.toml`, and `Cargo.lock` — and verifies they agree afterwards.
 2. Rehearse the wheel matrix: run `release.yml` via `workflow_dispatch`. It builds and smoke-tests every platform and
    **skips publishing**, so the matrix can fail without burning a version number.
 3. Open a PR from `development` to `main`, titled for the version. Merging it is the promotion.
-4. Tag `main` — `just tag` refuses to run from any other branch — which triggers the publishing workflow.
+4. Tag `main` — `just tag` refuses to run from any other branch, and re-runs `just version-check` first — which triggers
+   the publishing workflow.
 
 Tagging is the irreversible step: PyPI releases are immutable, and a broken wheel can only be yanked, never replaced.
 Everything before step 4 is reversible, which is why the rehearsal is worth the wait.
