@@ -71,18 +71,18 @@ it lives in `pyproject.toml`.
 
 ## Layout
 
-| Path                     | What lives there                                                                          |
-| ------------------------ | ----------------------------------------------------------------------------------------- |
-| `src/fold.rs`            | Port of `pycountry.remove_accents`, plus the two normalizations the indices and fuzzy use |
-| `src/db.rs`              | The four tables, their field indices in `pycountry`'s order, and swapping them at runtime |
-| `src/fuzzy.rs`           | Port of `ExistingCountries.search_fuzzy` — the four scoring passes                        |
-| `src/resolve.rs`         | Exact → historic → fuzzy ordering, subdivision scoping, and the per-call memo             |
-| `src/lib.rs`             | Polars kernels, the rayon fan-out, the scalar Python functions                            |
-| `src/data/`              | The vendored ISO tables (LGPL-2.1-or-later — see NOTICE) and their `VERSION` stamp        |
+| Path                       | What lives there                                                                          |
+| -------------------------- | ----------------------------------------------------------------------------------------- |
+| `src/fold.rs`              | Port of `pycountry.remove_accents`, plus the two normalizations the indices and fuzzy use |
+| `src/db.rs`                | The four tables, their field indices in `pycountry`'s order, and swapping them at runtime |
+| `src/fuzzy.rs`             | Port of `ExistingCountries.search_fuzzy` — the four scoring passes                        |
+| `src/resolve.rs`           | Exact → historic → fuzzy ordering, subdivision scoping, and the per-call memo             |
+| `src/lib.rs`               | Polars kernels, the rayon fan-out, the scalar Python functions                            |
+| `src/data/`                | The vendored ISO tables (LGPL-2.1-or-later — see NOTICE) and their `VERSION` stamp        |
 | `python/polars_pycountry/` | Expression wrappers, the `.country` namespace, and the table-refresh helpers              |
-| `tests/test_parity.py`   | The differential suite against `pycountry`                                                |
-| `tests/test_expr.py`     | Polars-level behavior: nulls, dtypes, scoping, composition, parallelism                   |
-| `tests/test_data.py`     | Table provenance, replacing them in a running process, and rejecting bad ones             |
+| `tests/test_parity.py`     | The differential suite against `pycountry`                                                |
+| `tests/test_expr.py`       | Polars-level behavior: nulls, dtypes, scoping, composition, parallelism                   |
+| `tests/test_data.py`       | Table provenance, replacing them in a running process, and rejecting bad ones             |
 
 [`docs/architecture/overview.md`](https://andrewadlof.github.io/polars-pycountry/architecture/overview/) explains *how*
 this implementation maps onto `pycountry`'s — including which of its surprising behaviors are load-bearing. Read it
@@ -197,8 +197,8 @@ A release promotes `development` to `main` — see [Releasing](#releasing).
 ## Pull requests
 
 Opening a PR pre-fills
-[the pull request template](https://github.com/andrewadlof/polars-pycountry/blob/main/.github/pull_request_template.md) —
-it is the checklist below in long form, including the parity questions. Delete any section that doesn't apply.
+[the pull request template](https://github.com/andrewadlof/polars-pycountry/blob/main/.github/pull_request_template.md)
+— it is the checklist below in long form, including the parity questions. Delete any section that doesn't apply.
 
 - Branch from `development` and target `development`. PRs against `main` are for releases only.
 - Add a bullet to the `## [Unreleased]` section of `CHANGELOG.md` for anything user-visible. Skip it for internal
@@ -244,12 +244,12 @@ be yanked, never replaced.
 CI publishes with **Trusted Publishing** (OIDC), so there is no stored token to leak, rotate, or forget to revoke. PyPI
 holds a publisher registered against four things, and the upload fails unless all four match:
 
-|                   |                  |
-| ----------------- | ---------------- |
-| Owner             | `andrewadlof`    |
+|                   |                    |
+| ----------------- | ------------------ |
+| Owner             | `andrewadlof`      |
 | Repository        | `polars-pycountry` |
-| Workflow filename | `release.yml`    |
-| Environment       | `pypi`           |
+| Workflow filename | `release.yml`      |
+| Environment       | `pypi`             |
 
 Register or edit it at <https://pypi.org/manage/project/polars-pycountry/settings/publishing/>. Renaming the repo,
 renaming `release.yml`, or renaming the environment breaks the match until the publisher is updated to agree — the

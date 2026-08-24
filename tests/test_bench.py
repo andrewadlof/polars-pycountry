@@ -30,9 +30,9 @@ if TYPE_CHECKING:
 ROWS = 200_000
 
 # The fuzzy case runs on far fewer rows, because `pycountry`'s `search_fuzzy`
-# costs about 15 ms per call -- it scans every country and every subdivision,
+# costs about 8 ms per call -- it scans every country and every subdivision,
 # in Python, with no cache. At 200,000 rows the reference alone would take
-# most of an hour, which is not a benchmark anyone runs. Both sides are
+# around half an hour, which is not a benchmark anyone runs. Both sides are
 # measured on the same count, so the ratio is still the ratio.
 FUZZY_ROWS = 2_000
 

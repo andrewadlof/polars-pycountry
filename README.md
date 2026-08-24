@@ -228,23 +228,25 @@ struct either way — a keyword never changes its shape.
 
 Measured with `just bench`:
 
-| exact lookup, 200,000 rows          |  throughput | vs. `map_elements` |
-| ----------------------------------- | ----------: | -----------------: |
-| `pycountry` via `Expr.map_elements` | 488k rows/s |                  — |
-| `polars_pycountry`, `parallel=False`  | 6.6M rows/s |              13.6× |
-| `polars_pycountry`, `parallel=True`   |  21M rows/s |              43.5× |
+| exact lookup, 200,000 rows           |   throughput | vs. `map_elements` |
+| ------------------------------------ | -----------: | -----------------: |
+| `pycountry` via `Expr.map_elements`  |  845k rows/s |                  — |
+| `polars_pycountry`, `parallel=False` | 12.3M rows/s |              14.5× |
+| `polars_pycountry`, `parallel=True`  |   58M rows/s |                69× |
 
-| fuzzy lookup, 2,000 rows                 |  throughput | vs. `map_elements` |
-| ---------------------------------------- | ----------: | -----------------: |
-| `pycountry` via `Expr.map_elements`      |  127 rows/s |                  — |
-| `polars_pycountry`, `fuzzy=True`, serial   | 514k rows/s |             4,059× |
-| `polars_pycountry`, `fuzzy=True`, parallel | 582k rows/s |             4,598× |
+| fuzzy lookup, 2,000 rows                   |  throughput | vs. `map_elements` |
+| ------------------------------------------ | ----------: | -----------------: |
+| `pycountry` via `Expr.map_elements`        |  130 rows/s |                  — |
+| `polars_pycountry`, `fuzzy=True`, serial   | 604k rows/s |             4,663× |
+| `polars_pycountry`, `fuzzy=True`, parallel | 702k rows/s |             5,419× |
 
-<sub>Intel Core Ultra 5 135U (14 threads), 15 GB RAM, Linux 6.6 (WSL2), Python 3.12.12, Polars 1.43.2.</sub>
+<sub>AMD Ryzen 9 3950X (16 cores / 32 threads), 31 GB RAM, Linux 6.18 (WSL2), Python 3.12.13, Polars 1.44.0. Median of
+six runs; the `parallel=True` exact figure varies by about ±13% between runs, because at 200,000 rows it completes in ~3
+ms.</sub>
 
 The two row counts differ on purpose. `pycountry.countries.lookup` is a dict probe, so 200,000 rows of it take a
-fraction of a second; `search_fuzzy` scans every country *and* every subdivision, in Python, with no cache, at ~15 ms
-per call — 200,000 rows of that would take most of an hour. Both sides are measured on the same count, so each ratio
+fraction of a second; `search_fuzzy` scans every country *and* every subdivision, in Python, with no cache, at ~8 ms
+per call — 200,000 rows of that would take about half an hour. Both sides are measured on the same count, so each ratio
 still compares like with like.
 
 ### What the fuzzy number depends on
@@ -255,8 +257,11 @@ which regime you are in:
 
 | 200,000 rows, `fuzzy=True` | `parallel=False` | `parallel=True` |
 | -------------------------- | ---------------: | --------------: |
-| 14 distinct values         |     13.5M rows/s |    15.6M rows/s |
-| 5,046 distinct values      |      145k rows/s |     551k rows/s |
+| 14 distinct values         |     15.3M rows/s |    21.7M rows/s |
+| 4,891 distinct values      |      182k rows/s |    3.03M rows/s |
+
+<sub>Not part of `just bench`: the low-cardinality row draws from the same 14-value vocabulary the fuzzy benchmark uses,
+the high-cardinality row from every distinct ISO 3166-2 subdivision name. Median of five runs.</sub>
 
 Above 100,000 rows the distinct values are resolved once up front, in parallel, and the rows are filled from the result.
 Without that each thread would build its own cache and re-run the same searches, which made `parallel=True` *slower*
@@ -365,10 +370,10 @@ If a future Polars release bumps the plugin ABI, this package fails loudly at lo
 ## Contributing
 
 Contributions are welcome — see
-[CONTRIBUTING.md](https://github.com/andrewadlof/polars-pycountry/blob/main/CONTRIBUTING.md) for the development loop, the
-parity requirement, and how to refresh the ISO tables.
-[`docs/architecture/overview.md`](https://andrewadlof.github.io/polars-pycountry/architecture/overview/) explains how this
-implementation maps onto `pycountry`'s, which is worth reading before changing the matching rules.
+[CONTRIBUTING.md](https://github.com/andrewadlof/polars-pycountry/blob/main/CONTRIBUTING.md) for the development loop,
+the parity requirement, and how to refresh the ISO tables.
+[`docs/architecture/overview.md`](https://andrewadlof.github.io/polars-pycountry/architecture/overview/) explains how
+this implementation maps onto `pycountry`'s, which is worth reading before changing the matching rules.
 
 ## License
 
