@@ -9,7 +9,7 @@
 
 [package]
 name = "polars-pycountry"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 description = "Vectorized, pycountry-compatible ISO 3166 / 4217 code lookup for Polars."
 license = "MIT OR Apache-2.0"

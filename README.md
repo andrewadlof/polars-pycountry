@@ -245,8 +245,8 @@ six runs; the `parallel=True` exact figure varies by about ±13% between runs, b
 ms.</sub>
 
 The two row counts differ on purpose. `pycountry.countries.lookup` is a dict probe, so 200,000 rows of it take a
-fraction of a second; `search_fuzzy` scans every country *and* every subdivision, in Python, with no cache, at ~8 ms
-per call — 200,000 rows of that would take about half an hour. Both sides are measured on the same count, so each ratio
+fraction of a second; `search_fuzzy` scans every country *and* every subdivision, in Python, with no cache, at ~8 ms per
+call — 200,000 rows of that would take about half an hour. Both sides are measured on the same count, so each ratio
 still compares like with like.
 
 ### What the fuzzy number depends on

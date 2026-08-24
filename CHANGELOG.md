@@ -7,6 +7,27 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-08-24
+
+### Security
+
+- Upgraded to `pyo3` 0.29, which closes [GHSA-36hh-v3qg-5jq4](https://github.com/advisories/GHSA-36hh-v3qg-5jq4) (high:
+  out-of-bounds read in the `PyList`/`PyTuple` iterator `nth`/`nth_back`) and
+  [GHSA-chgr-c6px-7xpp](https://github.com/advisories/GHSA-chgr-c6px-7xpp) (moderate: missing `Sync` bound on
+  `PyCFunction::new_closure`). Neither was reachable from this crate — it calls none of those APIs — but 0.1.0 shipped
+  wheels built against the affected pyo3. `pyo3-polars` 0.27 pinned `pyo3` ^0.28, so the fix required moving
+  `pyo3-polars` to 0.28 and `polars-rs` to 0.55 together.
+
+### Changed
+
+- Minimum Rust toolchain is now 1.95, a floor `polars-rs` 0.55 imposes via `sysinfo` 0.39.
+- Re-measured the documented benchmarks. The high-cardinality row of the fuzzy table was labelled
+  `5,046 distinct values`, the ISO 3166-2 entry count; deduplicated there are 4,891 distinct subdivision names. Figures
+  are now medians rather than single samples.
+
+The plugin FFI ABI is unchanged — `polars-ffi` 0.55 still declares MAJOR 0, MINOR 1 — and there are no source or API
+changes, so this is a drop-in replacement for 0.1.0.
+
 ## [0.1.0] - 2026-08-24
 
 First release.
@@ -41,4 +62,5 @@ First release.
   there is no fuzzy search over currencies or the historic table.
 
 [0.1.0]: https://github.com/andrewadlof/polars-pycountry/releases/tag/v0.1.0
-[unreleased]: https://github.com/andrewadlof/polars-pycountry/compare/v0.1.0...HEAD
+[0.1.1]: https://github.com/andrewadlof/polars-pycountry/releases/tag/v0.1.1
+[unreleased]: https://github.com/andrewadlof/polars-pycountry/compare/v0.1.1...HEAD

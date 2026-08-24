@@ -1471,7 +1471,7 @@ dependencies = [
 
 [[package]]
 name = "polars-pycountry"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "polars",
  "pyo3",

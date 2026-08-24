@@ -9,7 +9,7 @@
 
 [project]
 name = "polars-pycountry"
-version = "0.1.0"
+version = "0.1.1"
 description = "Vectorized, pycountry-compatible ISO 3166 / 4217 code lookup for Polars."
 readme = "README.md"
 requires-python = ">=3.10"
