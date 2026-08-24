@@ -14,7 +14,7 @@ much a column repeats itself -- which real columns do, heavily.
 
 from __future__ import annotations
 
-import polars_country as pc
+import polars_pycountry as pc
 
 import random
 import time

@@ -36,9 +36,9 @@ First release.
 ### Notes
 
 - The vendored ISO tables are LGPL-2.1-or-later and are compiled into the wheel. See
-  [NOTICE](https://github.com/andrewadlof/polars-country/blob/main/NOTICE) before redistributing.
+  [NOTICE](https://github.com/andrewadlof/polars-pycountry/blob/main/NOTICE) before redistributing.
 - Two deliberate divergences from `pycountry`: blank input resolves to null rather than matching every country, and
   there is no fuzzy search over currencies or the historic table.
 
-[0.1.0]: https://github.com/andrewadlof/polars-country/releases/tag/v0.1.0
-[unreleased]: https://github.com/andrewadlof/polars-country/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/andrewadlof/polars-pycountry/releases/tag/v0.1.0
+[unreleased]: https://github.com/andrewadlof/polars-pycountry/compare/v0.1.0...HEAD

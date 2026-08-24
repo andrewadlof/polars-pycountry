@@ -4,7 +4,7 @@
 //!
 //! * Polars `dlopen`s it and calls the C-ABI symbols emitted by
 //!   `#[polars_expr]`. That is the vectorized path.
-//! * Python imports it as `polars_country._internal` for the scalar helpers,
+//! * Python imports it as `polars_pycountry._internal` for the scalar helpers,
 //!   which exist so non-DataFrame callers do not have to round-trip through a
 //!   one-row frame.
 //!

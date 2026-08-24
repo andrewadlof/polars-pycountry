@@ -1,4 +1,4 @@
-# polars-country
+# polars-pycountry
 
 {% include-markdown "../README.md" start="<!--intro-start-->" end="<!--intro-end-->" %}
 

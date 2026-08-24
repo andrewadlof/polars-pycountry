@@ -1,4 +1,4 @@
-# polars-country
+# polars-pycountry
 
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](#license)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
@@ -16,11 +16,11 @@ driven through `Expr.map_elements`, one interpreter round-trip per row.
 This package reads the same [`iso-codes`](https://salsa.debian.org/iso-codes-team/iso-codes) tables `pycountry` ships,
 implements its lookup rules in Rust, and exposes them as ordinary Polars expressions. It is built to produce **identical
 output to `pycountry`**, not merely similar output — see
-[Correctness](https://andrewadlof.github.io/polars-country/correctness/).
+[Correctness](https://andrewadlof.github.io/polars-pycountry/correctness/).
 
 ```python
 import polars as pl
-import polars_country as pc
+import polars_pycountry as pc
 
 df = pl.DataFrame({
     "country": ["USA", "united kingdom", "276", "🇫🇷", "Nowhere", None],
@@ -54,15 +54,15 @@ df.with_columns(
 ## Install
 
 ```bash
-pip install polars-country
+pip install polars-pycountry
 # or
-uv add polars-country
+uv add polars-pycountry
 ```
 
 Prebuilt wheels cover Linux (glibc and musl, x86_64 and aarch64), macOS (Intel and Apple Silicon), and Windows (x64 and
 arm64). There is one wheel per platform rather than one per Python version, because the extension is built against the
 stable ABI. An sdist is published too, so anything else builds from source given a Rust toolchain — see
-[CONTRIBUTING.md](https://github.com/andrewadlof/polars-country/blob/main/CONTRIBUTING.md).
+[CONTRIBUTING.md](https://github.com/andrewadlof/polars-pycountry/blob/main/CONTRIBUTING.md).
 
 `pycountry` is **not** a runtime dependency. The ISO tables are compiled into the extension; `pycountry` is installed
 only for the test suite, which asserts the two agree.
@@ -130,7 +130,7 @@ reference to match a fuzzy currency search against.
 ### Nulls
 
 Every expression returns **null** when nothing matched, and null for null input. Blank and whitespace-only input is null
-too — see [fuzzy matching](https://andrewadlof.github.io/polars-country/matching/#fuzzy-matching) for why that is a
+too — see [fuzzy matching](https://andrewadlof.github.io/polars-pycountry/matching/#fuzzy-matching) for why that is a
 deliberate divergence from `pycountry`.
 
 Null is also a real answer, not only a failure: most countries have no `official_name` and almost none have a
@@ -241,14 +241,14 @@ Measured with `just bench`:
 | exact lookup, 200,000 rows          |  throughput | vs. `map_elements` |
 | ----------------------------------- | ----------: | -----------------: |
 | `pycountry` via `Expr.map_elements` | 488k rows/s |                  — |
-| `polars_country`, `parallel=False`  | 6.6M rows/s |              13.6× |
-| `polars_country`, `parallel=True`   |  21M rows/s |              43.5× |
+| `polars_pycountry`, `parallel=False`  | 6.6M rows/s |              13.6× |
+| `polars_pycountry`, `parallel=True`   |  21M rows/s |              43.5× |
 
 | fuzzy lookup, 2,000 rows                 |  throughput | vs. `map_elements` |
 | ---------------------------------------- | ----------: | -----------------: |
 | `pycountry` via `Expr.map_elements`      |  127 rows/s |                  — |
-| `polars_country`, `fuzzy=True`, serial   | 514k rows/s |             4,059× |
-| `polars_country`, `fuzzy=True`, parallel | 582k rows/s |             4,598× |
+| `polars_pycountry`, `fuzzy=True`, serial   | 514k rows/s |             4,059× |
+| `polars_pycountry`, `fuzzy=True`, parallel | 582k rows/s |             4,598× |
 
 <sub>Intel Core Ultra 5 135U (14 threads), 15 GB RAM, Linux 6.6 (WSL2), Python 3.12.12, Polars 1.43.2.</sub>
 
@@ -306,7 +306,7 @@ different snapshots. `tests/test_data.py` separately asserts the vendored tables
 
 The known, deliberate divergences are blank input (null rather than "every country"), and no fuzzy search over
 currencies or the historic table. Everything else agreeing is the contract; if you find an input where this package and
-`pycountry` disagree, that is a bug here. Please [open an issue](https://github.com/andrewadlof/polars-country/issues)
+`pycountry` disagree, that is a bug here. Please [open an issue](https://github.com/andrewadlof/polars-pycountry/issues)
 with the input.
 
 <!--correctness-end-->
@@ -375,20 +375,20 @@ If a future Polars release bumps the plugin ABI, this package fails loudly at lo
 ## Contributing
 
 Contributions are welcome — see
-[CONTRIBUTING.md](https://github.com/andrewadlof/polars-country/blob/main/CONTRIBUTING.md) for the development loop, the
+[CONTRIBUTING.md](https://github.com/andrewadlof/polars-pycountry/blob/main/CONTRIBUTING.md) for the development loop, the
 parity requirement, and how to refresh the ISO tables.
-[`docs/architecture/overview.md`](https://andrewadlof.github.io/polars-country/architecture/overview/) explains how this
+[`docs/architecture/overview.md`](https://andrewadlof.github.io/polars-pycountry/architecture/overview/) explains how this
 implementation maps onto `pycountry`'s, which is worth reading before changing the matching rules.
 
 ## License
 
 Licensed under either of
-[Apache License, Version 2.0](https://github.com/andrewadlof/polars-country/blob/main/LICENSE-APACHE) or
-[MIT license](https://github.com/andrewadlof/polars-country/blob/main/LICENSE-MIT) at your option.
+[Apache License, Version 2.0](https://github.com/andrewadlof/polars-pycountry/blob/main/LICENSE-APACHE) or
+[MIT license](https://github.com/andrewadlof/polars-pycountry/blob/main/LICENSE-MIT) at your option.
 
 Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in this work, as defined
 in the Apache-2.0 license, shall be dual licensed as above, without any additional terms or conditions.
 
 **The vendored ISO tables are not covered by that dual license.** They come from the `iso-codes` project and are
 licensed **LGPL-2.1-or-later**, which has obligations that attach to any binary embedding them. See
-[NOTICE](https://github.com/andrewadlof/polars-country/blob/main/NOTICE) before redistributing.
+[NOTICE](https://github.com/andrewadlof/polars-pycountry/blob/main/NOTICE) before redistributing.

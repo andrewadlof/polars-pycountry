@@ -7,8 +7,8 @@ scalar Python function cannot see.
 
 from __future__ import annotations
 
-import polars_country as pc
-import polars_country._expr
+import polars_pycountry as pc
+import polars_pycountry._expr
 
 import polars as pl
 import pycountry

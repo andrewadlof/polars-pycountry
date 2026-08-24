@@ -19,7 +19,7 @@ on the record count the only symptom would be countries quietly going missing.
 
 from __future__ import annotations
 
-from polars_country._internal import VERSION_FILE, load_iso_dir
+from polars_pycountry._internal import VERSION_FILE, load_iso_dir
 
 import tempfile
 import urllib.request
@@ -72,7 +72,7 @@ def load_iso_data(source: str | Path) -> str:
 
     Examples
     --------
-    >>> import polars_country as pc
+    >>> import polars_pycountry as pc
     >>> pc.load_iso_data("/mnt/reference/iso-codes")  # doctest: +SKIP
     '4.20.1'
     """
@@ -122,7 +122,7 @@ def refresh_iso_data(
 
     Examples
     --------
-    >>> import polars_country as pc
+    >>> import polars_pycountry as pc
     >>> pc.refresh_iso_data(save_to="iso-codes/")  # doctest: +SKIP
     'unknown'
     """

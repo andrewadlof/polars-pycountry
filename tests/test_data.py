@@ -12,7 +12,7 @@ test in the session resolving against a toy table.
 
 from __future__ import annotations
 
-import polars_country as pc
+import polars_pycountry as pc
 
 # `tests/` is not a package, so pytest's rootdir insertion puts it on
 # sys.path and conftest imports as a plain module.

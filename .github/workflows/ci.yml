@@ -102,7 +102,7 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install dist/*.whl
           python -c "
-          import polars as pl, polars_country as pc
+          import polars as pl, polars_pycountry as pc
           assert pc.lookup_country('USA')['alpha_2'] == 'US'
           assert pl.DataFrame({'c': ['united kingdom', None]}).select(
               pc.alpha_3('c'))['c'].to_list() == ['GBR', None]
@@ -150,9 +150,9 @@ jobs:
         run: |
           ls dist/
           python -c "
-          import polars_country, sys
+          import polars_pycountry, sys
           print('python', sys.version)
-          print('iso-codes', polars_country.iso_version())
+          print('iso-codes', polars_pycountry.iso_version())
           "
 
       # The parity suite is the real exercise: every value in all four

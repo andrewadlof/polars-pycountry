@@ -1,4 +1,4 @@
-# Contributing to polars-country
+# Contributing to polars-pycountry
 
 Thanks for taking the time. This is a small project with one unusual property worth understanding before you start:
 **its contract is another library's behavior.** Almost every design decision here follows from "must match `pycountry`",
@@ -6,10 +6,10 @@ so a change that looks like an improvement can be a bug — including fixing wha
 [parity requirement](#the-parity-rule) section explains where that bites.
 
 By contributing you agree that your work is dual licensed under MIT and Apache-2.0, matching the project — see
-[LICENSE-MIT](https://github.com/andrewadlof/polars-country/blob/main/LICENSE-MIT) and
-[LICENSE-APACHE](https://github.com/andrewadlof/polars-country/blob/main/LICENSE-APACHE).
+[LICENSE-MIT](https://github.com/andrewadlof/polars-pycountry/blob/main/LICENSE-MIT) and
+[LICENSE-APACHE](https://github.com/andrewadlof/polars-pycountry/blob/main/LICENSE-APACHE).
 
-**Read [NOTICE](https://github.com/andrewadlof/polars-country/blob/main/NOTICE) before touching `src/data/` or the
+**Read [NOTICE](https://github.com/andrewadlof/polars-pycountry/blob/main/NOTICE) before touching `src/data/` or the
 table-loading code.** The vendored ISO tables are LGPL-2.1-or-later and are compiled into every wheel, which puts real
 obligations on this project. The runtime replacement mechanism (`POLARS_COUNTRY_DATA`, `load_iso_data`) is how those
 obligations are met, so weakening it is a licensing change rather than an API change.
@@ -30,8 +30,8 @@ You need [Rust](https://rustup.rs/) (the pinned toolchain in `rust-toolchain.tom
 `uv run just ...` works if you don't have it globally.
 
 ```bash
-git clone https://github.com/andrewadlof/polars-country
-cd polars-country
+git clone https://github.com/andrewadlof/polars-pycountry
+cd polars-pycountry
 uv sync          # creates .venv, installs dev tools, builds the extension
 just dev         # rebuild the extension in-place after Rust changes
 ```
@@ -65,7 +65,7 @@ just docs       # build the site, failing on broken links
 
 `just check` is what CI runs. Run it before opening a PR.
 
-`notebooks/polars_country_tour.py` is a marimo notebook, and `just notebook-export` runs every one of its cells for
+`notebooks/polars_pycountry_tour.py` is a marimo notebook, and `just notebook-export` runs every one of its cells for
 real. It is worth treating as a second smoke test after an API change: a signature that has moved out from under the
 notebook fails there rather than in front of a reader. marimo lives in its own `notebook` dependency group, so a plain
 `uv sync` does not install it and CI never runs the notebook.
@@ -85,13 +85,13 @@ it lives in `pyproject.toml`.
 | `src/resolve.rs`         | Exact → historic → fuzzy ordering, subdivision scoping, and the per-call memo             |
 | `src/lib.rs`             | Polars kernels, the rayon fan-out, the scalar Python functions                            |
 | `src/data/`              | The vendored ISO tables (LGPL-2.1-or-later — see NOTICE) and their `VERSION` stamp        |
-| `python/polars_country/` | Expression wrappers, the `.country` namespace, and the table-refresh helpers              |
+| `python/polars_pycountry/` | Expression wrappers, the `.country` namespace, and the table-refresh helpers              |
 | `tests/test_parity.py`   | The differential suite against `pycountry`                                                |
 | `tests/test_expr.py`     | Polars-level behavior: nulls, dtypes, scoping, composition, parallelism                   |
 | `tests/test_data.py`     | Table provenance, replacing them in a running process, and rejecting bad ones             |
 | `notebooks/`             | The marimo tour: every expression run live, plus a benchmark and a parity spot-check      |
 
-[`docs/architecture/overview.md`](https://andrewadlof.github.io/polars-country/architecture/overview/) explains *how*
+[`docs/architecture/overview.md`](https://andrewadlof.github.io/polars-pycountry/architecture/overview/) explains *how*
 this implementation maps onto `pycountry`'s — including which of its surprising behaviors are load-bearing. Read it
 before touching `src/db.rs` or `src/fuzzy.rs`; none of it is obvious from the code alone.
 
@@ -137,7 +137,7 @@ download cannot leave the crate holding a mix of two snapshots. It also rewrites
 release.
 
 Users refreshing the tables in *their* running process is a separate mechanism — `pc.refresh_iso_data()` and
-`pc.load_iso_data()`, implemented in `src/db.rs` and `python/polars_country/_data.py`. That path does not touch the
+`pc.load_iso_data()`, implemented in `src/db.rs` and `python/polars_pycountry/_data.py`. That path does not touch the
 vendored files and needs no rebuild. Both go through `Db::from_texts`, so the parse and record-floor checks cover them
 together.
 
@@ -145,7 +145,7 @@ A table refresh changes what the package returns, so it warrants a CHANGELOG ent
 
 ## Documentation
 
-The site is MkDocs + Material, published to <https://andrewadlof.github.io/polars-country/> from `main` by
+The site is MkDocs + Material, published to <https://andrewadlof.github.io/polars-pycountry/> from `main` by
 `.github/workflows/docs.yml`. Pull requests targeting `main` build it without deploying.
 
 ```bash
@@ -172,7 +172,7 @@ and stays covered.
 Cross-reference API objects with autorefs rather than a hand-written anchor, so the link survives a page being renamed:
 
 ```markdown
-[`alpha_2()`][polars_country.alpha_2]
+[`alpha_2()`][polars_pycountry.alpha_2]
 ```
 
 Diagrams use Material's built-in mermaid support — a plain \`\`\`mermaid fence. The `mkdocs-mermaid2` plugin is
@@ -204,7 +204,7 @@ A release promotes `development` to `main` — see [Releasing](#releasing).
 ## Pull requests
 
 Opening a PR pre-fills
-[the pull request template](https://github.com/andrewadlof/polars-country/blob/main/.github/pull_request_template.md) —
+[the pull request template](https://github.com/andrewadlof/polars-pycountry/blob/main/.github/pull_request_template.md) —
 it is the checklist below in long form, including the parity questions. Delete any section that doesn't apply.
 
 - Branch from `development` and target `development`. PRs against `main` are for releases only.
@@ -254,11 +254,11 @@ holds a publisher registered against four things, and the upload fails unless al
 |                   |                  |
 | ----------------- | ---------------- |
 | Owner             | `andrewadlof`    |
-| Repository        | `polars-country` |
+| Repository        | `polars-pycountry` |
 | Workflow filename | `release.yml`    |
 | Environment       | `pypi`           |
 
-Register or edit it at <https://pypi.org/manage/project/polars-country/settings/publishing/>. Renaming the repo,
+Register or edit it at <https://pypi.org/manage/project/polars-pycountry/settings/publishing/>. Renaming the repo,
 renaming `release.yml`, or renaming the environment breaks the match until the publisher is updated to agree — the
 failure surfaces at upload time as `Trusted publishing exchange failure`, after the whole wheel matrix has built.
 
@@ -288,5 +288,5 @@ period rather than another comment. Maintainers may edit, lock, or remove contri
 
 ## Questions
 
-Open a [discussion or issue](https://github.com/andrewadlof/polars-country/issues). Bug reports that include the exact
+Open a [discussion or issue](https://github.com/andrewadlof/polars-pycountry/issues). Bug reports that include the exact
 input string are answered fastest.

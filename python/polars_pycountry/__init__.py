@@ -8,7 +8,7 @@ instead of row-by-row through `Expr.map_elements`.
 Examples
 --------
 >>> import polars as pl
->>> import polars_country as pc
+>>> import polars_pycountry as pc
 >>> df = pl.DataFrame({"c": ["USA", "united kingdom", "276", None]})
 >>> df.with_columns(pc.alpha_2("c"))  # doctest: +SKIP
 >>> df.with_columns(pl.col("c").country.name())  # doctest: +SKIP
@@ -18,13 +18,13 @@ The `.country` expression namespace is registered on import.
 
 from __future__ import annotations
 
-from polars_country._data import (
+from polars_pycountry._data import (
     ISO_CODES_URL,
     TABLE_FILES,
     load_iso_data,
     refresh_iso_data,
 )
-from polars_country._expr import (
+from polars_pycountry._expr import (
     alpha_2,
     alpha_3,
     common_name,
@@ -45,7 +45,7 @@ from polars_country._expr import (
     subdivision_parent_code,
     subdivision_type,
 )
-from polars_country._internal import (
+from polars_pycountry._internal import (
     DATA_PATH_ENV,
     iso_version,
     lookup_country,
@@ -54,7 +54,7 @@ from polars_country._internal import (
     search_countries,
     table_sizes,
 )
-from polars_country._namespace import CountryNamespace
+from polars_pycountry._namespace import CountryNamespace
 
 __all__ = [
     "DATA_PATH_ENV",

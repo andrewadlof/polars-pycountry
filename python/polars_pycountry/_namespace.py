@@ -1,14 +1,14 @@
 """The `.country` expression namespace.
 
-Importing `polars_country` registers this, so `pl.col("c").country.alpha_2()`
+Importing `polars_pycountry` registers this, so `pl.col("c").country.alpha_2()`
 works without importing anything else. Every method mirrors the module-level
-function of the same name in `polars_country._expr`, and takes the same
+function of the same name in `polars_pycountry._expr`, and takes the same
 keywords.
 """
 
 from __future__ import annotations
 
-from polars_country import _expr
+from polars_pycountry import _expr
 
 from typing import TYPE_CHECKING
 

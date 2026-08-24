@@ -1,5 +1,5 @@
 # =============================================================================
-# polars-country — project configuration.
+# polars-pycountry — project configuration.
 #
 # Native Polars expression plugin (Rust) that reimplements `pycountry`'s
 # lookup rules over the ISO 3166 and ISO 4217 tables, so resolving countries,
@@ -8,7 +8,7 @@
 # =============================================================================
 
 [project]
-name = "polars-country"
+name = "polars-pycountry"
 version = "0.1.0"
 description = "Vectorized, pycountry-compatible ISO 3166 / 4217 code lookup for Polars."
 readme = "README.md"
@@ -55,11 +55,11 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/andrewadlof/polars-country"
-Repository = "https://github.com/andrewadlof/polars-country"
-Documentation = "https://andrewadlof.github.io/polars-country/"
-Issues = "https://github.com/andrewadlof/polars-country/issues"
-Changelog = "https://github.com/andrewadlof/polars-country/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/andrewadlof/polars-pycountry"
+Repository = "https://github.com/andrewadlof/polars-pycountry"
+Documentation = "https://andrewadlof.github.io/polars-pycountry/"
+Issues = "https://github.com/andrewadlof/polars-pycountry/issues"
+Changelog = "https://github.com/andrewadlof/polars-pycountry/blob/main/CHANGELOG.md"
 
 [build-system]
 requires = ["maturin>=1.7,<2"]
@@ -67,7 +67,7 @@ build-backend = "maturin"
 
 [tool.maturin]
 python-source = "python"
-module-name = "polars_country._internal"
+module-name = "polars_pycountry._internal"
 features = ["pyo3/extension-module"]
 # The vendored ISO tables are `include_str!`d into the binary, so they need to
 # reach the sdist even though they are not Python files.
@@ -122,7 +122,7 @@ docs = [
   "mkdocs>=1.6.1",
   # Renders the API reference from the NumPy docstrings pydoclint already
   # enforces. Needs the compiled extension importable: the public surface is
-  # re-exported from `polars_country._internal`, which is a .so that no
+  # re-exported from `polars_pycountry._internal`, which is a .so that no
   # amount of static analysis can read.
   "mkdocstrings-python>=1.13.0",
   "mkdocstrings>=0.28.0",
@@ -715,7 +715,7 @@ unsupported-operator = "ignore"        # Tests may use dynamic operations
 
 # Override 5: Special handling for example/demo code
 [[tool.ty.overrides]]
-include = ["python/polars_country/**/*.py"]
+include = ["python/polars_pycountry/**/*.py"]
 
 [tool.ty.overrides.rules]
 possibly-unresolved-reference = "error"

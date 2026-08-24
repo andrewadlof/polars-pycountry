@@ -42,7 +42,7 @@ test *args: dev
 # Run the test suite with coverage (branch + term-missing report)
 [group('dev')]
 test_cov *args: dev
-    uv run pytest --cov=polars_country --cov-report=term-missing --cov-branch {{args}}
+    uv run pytest --cov=polars_pycountry --cov-report=term-missing --cov-branch {{args}}
 
 # Throughput: this plugin vs. pycountry through map_elements
 #
@@ -68,20 +68,20 @@ refresh-iso:
 # Open the tour notebook for editing (reactive, cells are editable)
 [group('dev')]
 notebook:
-    uv run --group notebook marimo edit notebooks/polars_country_tour.py
+    uv run --group notebook marimo edit notebooks/polars_pycountry_tour.py
 
 # Open the tour as a read-only app -- the widgets work, the code is hidden
 [group('dev')]
 notebook-run:
-    uv run --group notebook marimo run notebooks/polars_country_tour.py
+    uv run --group notebook marimo run notebooks/polars_pycountry_tour.py
 
 # Doubles as a smoke test: every cell runs for real, so an API that has moved
 # out from under the notebook fails here rather than in front of a reader.
 #
 # Execute the notebook end to end and write a self-contained HTML copy
 [group('dev')]
-notebook-export out="notebooks/polars_country_tour.html":
-    uv run --group notebook marimo export html notebooks/polars_country_tour.py -o {{out}}
+notebook-export out="notebooks/polars_pycountry_tour.html":
+    uv run --group notebook marimo export html notebooks/polars_pycountry_tour.py -o {{out}}
 
 # ----------------------------------------------------------------------------
 # docs: the MkDocs site

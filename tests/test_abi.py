@@ -16,8 +16,8 @@ needs an upper bound.
 
 from __future__ import annotations
 
-import polars_country as pc
-from polars_country import _internal
+import polars_pycountry as pc
+from polars_pycountry import _internal
 
 import ctypes
 

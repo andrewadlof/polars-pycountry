@@ -16,7 +16,7 @@
 # invalidates that match and the upload fails until the publisher on PyPI is
 # updated to agree. Register or edit it at:
 #
-#   https://pypi.org/manage/project/polars-country/settings/publishing/
+#   https://pypi.org/manage/project/polars-pycountry/settings/publishing/
 #
 # The switch from an API token also re-enables PEP 740 attestations: the
 # publish action defaults `attestations: true`, but an explicit `password:`
@@ -179,7 +179,7 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install dist/*.whl
           python -c "
-          import polars as pl, polars_country as pc
+          import polars as pl, polars_pycountry as pc
           assert pc.lookup_country('USA')['alpha_2'] == 'US'
           assert pc.lookup_country('Texas', fuzzy=True)['alpha_2'] == 'US'
           got = pl.DataFrame({'c': ['276', 'nope', None]}).select(

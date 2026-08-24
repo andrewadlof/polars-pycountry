@@ -8,13 +8,13 @@
 #
 # The API reference is generated from the NumPy docstrings that pydoclint
 # already enforces, so it cannot drift from the code either.
-site_name: polars-country
+site_name: polars-pycountry
 site_description: Vectorized, pycountry-compatible ISO 3166 / 4217 code lookup for
   Polars.
-site_url: https://andrewadlof.github.io/polars-country/
+site_url: https://andrewadlof.github.io/polars-pycountry/
 site_author: Drew Adlof
-repo_url: https://github.com/andrewadlof/polars-country
-repo_name: andrewadlof/polars-country
+repo_url: https://github.com/andrewadlof/polars-pycountry
+repo_name: andrewadlof/polars-pycountry
 # `development` is the default branch and the base for every PR, so "edit this
 # page" should land there rather than on `main`.
 edit_uri: edit/development/docs/
@@ -60,7 +60,7 @@ plugins:
   - search
   - include-markdown
   - section-index
-  # Resolves `[text][polars_country.alpha_2]` to whatever page that object is
+  # Resolves `[text][polars_pycountry.alpha_2]` to whatever page that object is
   # rendered on, so a cross-reference survives a page being moved or renamed.
   # Ships with mkdocstrings; listed explicitly so the ordering is deliberate.
   - autorefs
@@ -122,9 +122,9 @@ markdown_extensions:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/andrewadlof/polars-country
+      link: https://github.com/andrewadlof/polars-pycountry
     - icon: fontawesome/brands/python
-      link: https://pypi.org/project/polars-country/
+      link: https://pypi.org/project/polars-pycountry/
 nav:
   - Home: index.md
   - Usage:

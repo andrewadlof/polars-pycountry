@@ -1,5 +1,5 @@
-polars-country
-Copyright 2026 Drew Adlof and polars-country contributors
+polars-pycountry
+Copyright 2026 Drew Adlof and polars-pycountry contributors
 
 The code in this repository is licensed under either of
 
@@ -37,7 +37,7 @@ The full license text is in LICENSES/LGPL-2.1-or-later.txt.
 WHAT THIS MEANS HERE
 
 These files are compiled into the shared library with `include_str!`, so any
-binary distribution of polars-country -- every published wheel -- is a
+binary distribution of polars-pycountry -- every published wheel -- is a
 distribution of an LGPL-2.1-or-later work in a combined form. The LGPL's
 central requirement in that situation is that a recipient must be able to
 modify the LGPL'd portion and use the result. Three things are done to satisfy
@@ -49,7 +49,7 @@ it, and they are design constraints rather than paperwork:
 
   * The tables can be replaced at runtime without rebuilding or relinking
     anything. Set POLARS_COUNTRY_DATA to a directory of replacements before
-    first use, or call `polars_country.load_iso_data(directory)` at any point
+    first use, or call `polars_pycountry.load_iso_data(directory)` at any point
     in a running process. This is the LGPL section 6 "suitable mechanism"
     obligation, met by a documented, supported, first-class feature.
 

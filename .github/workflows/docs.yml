@@ -58,7 +58,7 @@ jobs:
 
       # Builds the Rust extension into the venv as a side effect. mkdocstrings
       # needs it importable: the scalar helpers are re-exported from
-      # `polars_country._internal`, a compiled module that static analysis
+      # `polars_pycountry._internal`, a compiled module that static analysis
       # cannot read.
       - name: Sync
         run: uv sync --group docs

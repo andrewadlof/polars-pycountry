@@ -18,7 +18,7 @@ skipped, so that they stay deliberate:
 
 from __future__ import annotations
 
-import polars_country as pc
+import polars_pycountry as pc
 from conftest import must
 
 import pycountry

@@ -110,5 +110,5 @@ no way for two processes on the same cluster to disagree about which snapshot th
 The cost is a licensing obligation: those tables are LGPL-2.1-or-later, so every wheel is a distribution of an LGPL work
 in combined form. The runtime replacement mechanism — `POLARS_COUNTRY_DATA` and `load_iso_data` — is not only a
 convenience feature; it is how this package meets the LGPL's requirement that a recipient be able to modify the licensed
-portion and use the result. See [NOTICE](https://github.com/andrewadlof/polars-country/blob/main/NOTICE). Removing or
+portion and use the result. See [NOTICE](https://github.com/andrewadlof/polars-pycountry/blob/main/NOTICE). Removing or
 weakening that mechanism would be a licensing change, not just an API change.

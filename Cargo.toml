@@ -1,19 +1,19 @@
 # =============================================================================
-# polars-country — Rust crate for the Polars expression plugin.
+# polars-pycountry — Rust crate for the Polars expression plugin.
 #
 # The compiled cdylib is BOTH a Polars plugin (dlopen'd by polars via
 # `register_plugin_function`, C-ABI symbols emitted by `#[polars_expr]`) and a
-# regular Python extension module (`polars_country._internal`, for the scalar
+# regular Python extension module (`polars_pycountry._internal`, for the scalar
 # helpers). maturin packages it as the latter.
 # =============================================================================
 
 [package]
-name = "polars-country"
+name = "polars-pycountry"
 version = "0.1.0"
 edition = "2021"
 description = "Vectorized, pycountry-compatible ISO 3166 / 4217 code lookup for Polars."
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/andrewadlof/polars-country"
+repository = "https://github.com/andrewadlof/polars-pycountry"
 keywords = ["polars", "pycountry", "iso3166", "country", "subdivision"]
 categories = ["internationalization", "data-structures"]
 # The crate is not published to crates.io: it is a cdylib whose only
