@@ -6,9 +6,14 @@
 # site without deploying, which is what catches a broken include marker or an
 # API reference that no longer resolves.
 #
-# Pages must be enabled once, with Settings -> Pages -> Source: GitHub Actions.
-# Without it the deploy step fails with "Resource not accessible by
-# integration" even though the build succeeded.
+# Pages must be enabled once, with Settings -> Pages -> Source: GitHub Actions
+# (the API calls this `build_type: workflow`). The build job is self-contained
+# and passes either way, so the setting only ever announces itself in `deploy`:
+# left on the default "Deploy from a branch", `actions/deploy-pages` 404s with
+# "Ensure GitHub Pages has been enabled", and GitHub separately runs its own
+# `pages-build-deployment` job that points Jekyll at the repository root --
+# which fails on the mkdocs snippet syntax in docs/, since those files are
+# MkDocs input and were never Jekyll sources.
 name: Docs
 on:
   push:
