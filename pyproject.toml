@@ -49,7 +49,7 @@ classifiers = [
   "Typing :: Typed",
 ]
 dependencies = [
-  # Plugin FFI ABI is (0, 1) from py-polars 1.37 through 1.42+, so the compiled
+  # Plugin FFI ABI is (0, 1) from py-polars 1.37 through 1.44+, so the compiled
   # plugin spans this whole range. See docs/architecture/overview.md.
   "polars>=1.37.1",
 ]
